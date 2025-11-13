@@ -3,6 +3,12 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import dotenv from 'dotenv';
 
+// Import des routes
+import categoriesRoutes from './routes/categories';
+import productsRoutes from './routes/products';
+import ordersRoutes from './routes/orders';
+import paymentsRoutes from './routes/payments';
+
 dotenv.config();
 
 const app = Fastify({
@@ -33,10 +39,19 @@ app.get('/', async () => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
-      api: '/api/v1'
+      categories: '/api/categories',
+      products: '/api/products',
+      orders: '/api/orders',
+      payments: '/api/payments'
     }
   };
 });
+
+// Enregistrement des routes API
+app.register(categoriesRoutes, { prefix: '/api/categories' });
+app.register(productsRoutes, { prefix: '/api/products' });
+app.register(ordersRoutes, { prefix: '/api/orders' });
+app.register(paymentsRoutes, { prefix: '/api/payments' });
 
 // Démarrage du serveur
 const start = async () => {

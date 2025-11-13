@@ -1,0 +1,169 @@
+import axios from 'axios';
+import type {
+  ApiResponse,
+  Category,
+  Product,
+  Order,
+  Payment,
+} from '../types';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Categories API
+export const categoriesApi = {
+  getAll: async () => {
+    const response = await api.get<ApiResponse<Category[]>>('/api/categories');
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Category>>(`/api/categories/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Category>) => {
+    const response = await api.post<ApiResponse<Category>>('/api/categories', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Category>) => {
+    const response = await api.put<ApiResponse<Category>>(`/api/categories/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete<ApiResponse<Category>>(`/api/categories/${id}`);
+    return response.data;
+  },
+};
+
+// Products API
+export const productsApi = {
+  getAll: async (params?: { categoryId?: string; available?: boolean }) => {
+    const response = await api.get<ApiResponse<Product[]>>('/api/products', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Product>>(`/api/products/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Product>) => {
+    const response = await api.post<ApiResponse<Product>>('/api/products', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Product>) => {
+    const response = await api.put<ApiResponse<Product>>(`/api/products/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete<ApiResponse<Product>>(`/api/products/${id}`);
+    return response.data;
+  },
+
+  updateAvailability: async (id: string, isAvailable: boolean) => {
+    const response = await api.patch<ApiResponse<Product>>(
+      `/api/products/${id}/availability`,
+      { isAvailable }
+    );
+    return response.data;
+  },
+};
+
+// Orders API
+export const ordersApi = {
+  getAll: async (params?: { status?: string; type?: string; date?: string }) => {
+    const response = await api.get<ApiResponse<Order[]>>('/api/orders', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Order>>(`/api/orders/${id}`);
+    return response.data;
+  },
+
+  create: async (data: {
+    type: string;
+    tableId?: string;
+    customerName?: string;
+    customerPhone?: string;
+    notes?: string;
+    userId: string;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      notes?: string;
+      options?: Array<{ optionId: string }>;
+    }>;
+  }) => {
+    const response = await api.post<ApiResponse<Order>>('/api/orders', data);
+    return response.data;
+  },
+
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch<ApiResponse<Order>>(`/api/orders/${id}/status`, { status });
+    return response.data;
+  },
+
+  cancel: async (id: string) => {
+    const response = await api.delete<ApiResponse<Order>>(`/api/orders/${id}`);
+    return response.data;
+  },
+
+  getTodayStats: async () => {
+    const response = await api.get<ApiResponse<any>>('/api/orders/stats/today');
+    return response.data;
+  },
+};
+
+// Payments API
+export const paymentsApi = {
+  getAll: async (params?: { orderId?: string; method?: string; status?: string; date?: string }) => {
+    const response = await api.get<ApiResponse<Payment[]>>('/api/payments', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Payment>>(`/api/payments/${id}`);
+    return response.data;
+  },
+
+  create: async (data: {
+    orderId: string;
+    method: string;
+    amount: number;
+    reference?: string;
+    userId: string;
+  }) => {
+    const response = await api.post<ApiResponse<Payment>>('/api/payments', data);
+    return response.data;
+  },
+
+  getByOrder: async (orderId: string) => {
+    const response = await api.get<ApiResponse<any>>(`/api/payments/order/${orderId}`);
+    return response.data;
+  },
+
+  getTodayStats: async () => {
+    const response = await api.get<ApiResponse<any>>('/api/payments/stats/today');
+    return response.data;
+  },
+};
+
+// Health check
+export const healthCheck = async () => {
+  const response = await api.get('/health');
+  return response.data;
+};
+
+export default api;
