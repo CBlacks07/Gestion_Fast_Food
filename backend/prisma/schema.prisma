@@ -1,0 +1,332 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// GESTION DES UTILISATEURS ET RÔLES
+// ============================================
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+  KITCHEN
+  WAITER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      Role     @default(CASHIER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders    Order[]
+  payments  Payment[]
+
+  @@map("users")
+}
+
+// ============================================
+// GESTION DU MENU
+// ============================================
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  icon        String?   // Nom de l'icône ou URL
+  displayOrder Int      @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  products    Product[]
+
+  @@map("categories")
+}
+
+enum ProductType {
+  FOOD
+  DRINK
+  DESSERT
+  SIDE
+}
+
+model Product {
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  cost         Decimal?    @db.Decimal(10, 2) // Coût de revient
+  image        String?
+  type         ProductType @default(FOOD)
+  isAvailable  Boolean     @default(true)
+  isActive     Boolean     @default(true)
+  preparationTime Int?     // Temps de préparation en minutes
+  displayOrder Int         @default(0)
+  categoryId   String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  category     Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  options      ProductOption[]
+  recipes      Recipe[]
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+enum OptionType {
+  SUPPLEMENT  // Supplément (ex: fromage, sauce)
+  CHOICE      // Choix (ex: cuisson, taille)
+  REMOVAL     // Retrait (ex: sans oignon)
+}
+
+model Option {
+  id          String     @id @default(cuid())
+  name        String
+  type        OptionType
+  price       Decimal    @db.Decimal(10, 2) @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  products    ProductOption[]
+  orderItemOptions OrderItemOption[]
+
+  @@map("options")
+}
+
+// Table de liaison Produit <-> Options
+model ProductOption {
+  id        String   @id @default(cuid())
+  productId String
+  optionId  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  option    Option  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, optionId])
+  @@map("product_options")
+}
+
+// ============================================
+// GESTION DES STOCKS ET INGRÉDIENTS
+// ============================================
+
+enum IngredientUnit {
+  GRAM
+  KILOGRAM
+  LITER
+  MILLILITER
+  PIECE
+  UNIT
+}
+
+model Ingredient {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  description   String?
+  unit          IngredientUnit
+  currentStock  Decimal        @db.Decimal(10, 3) @default(0)
+  minStock      Decimal        @db.Decimal(10, 3) @default(0) // Seuil d'alerte
+  unitCost      Decimal        @db.Decimal(10, 2) // Coût par unité
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  recipes       Recipe[]
+  stockMovements StockMovement[]
+
+  @@map("ingredients")
+}
+
+// Recettes : lien entre Produits et Ingrédients
+model Recipe {
+  id           String     @id @default(cuid())
+  productId    String
+  ingredientId String
+  quantity     Decimal    @db.Decimal(10, 3) // Quantité d'ingrédient nécessaire
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("recipes")
+}
+
+enum StockMovementType {
+  PURCHASE    // Achat
+  SALE        // Vente (déstockage automatique)
+  ADJUSTMENT  // Ajustement manuel
+  WASTE       // Perte/gaspillage
+  RETURN      // Retour
+}
+
+model StockMovement {
+  id           String            @id @default(cuid())
+  ingredientId String
+  type         StockMovementType
+  quantity     Decimal           @db.Decimal(10, 3) // Positif pour entrée, négatif pour sortie
+  reason       String?
+  reference    String?           // Référence bon de commande, facture, etc.
+  createdAt    DateTime          @default(now())
+
+  // Relations
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@map("stock_movements")
+}
+
+// ============================================
+// GESTION DES COMMANDES
+// ============================================
+
+enum OrderType {
+  DINE_IN   // Sur place
+  TAKEAWAY  // À emporter
+  DELIVERY  // Livraison
+}
+
+enum OrderStatus {
+  PENDING     // En attente
+  PREPARING   // En préparation
+  READY       // Prêt
+  DELIVERED   // Livré
+  CANCELLED   // Annulé
+}
+
+model Table {
+  id        String   @id @default(cuid())
+  number    Int      @unique
+  capacity  Int      @default(4)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders    Order[]
+
+  @@map("tables")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique // Numéro de commande lisible
+  type          OrderType   @default(DINE_IN)
+  status        OrderStatus @default(PENDING)
+  tableId       String?
+  customerName  String?
+  customerPhone String?
+  notes         String?
+  subtotal      Decimal     @db.Decimal(10, 2) // Sous-total avant réductions
+  discount      Decimal     @db.Decimal(10, 2) @default(0)
+  tax           Decimal     @db.Decimal(10, 2) @default(0)
+  total         Decimal     @db.Decimal(10, 2) // Total final
+  userId        String      // Utilisateur qui a créé la commande
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  table         Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2) // Prix unitaire au moment de la commande
+  total     Decimal  @db.Decimal(10, 2) // Prix total (unitPrice * quantity + options)
+  notes     String?  // Notes spéciales pour cet item
+  createdAt DateTime @default(now())
+
+  // Relations
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+  options   OrderItemOption[]
+
+  @@map("order_items")
+}
+
+// Options sélectionnées pour un item de commande
+model OrderItemOption {
+  id          String   @id @default(cuid())
+  orderItemId String
+  optionId    String
+  price       Decimal  @db.Decimal(10, 2) // Prix de l'option au moment de la commande
+  createdAt   DateTime @default(now())
+
+  // Relations
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  option      Option    @relation(fields: [optionId], references: [id])
+
+  @@map("order_item_options")
+}
+
+// ============================================
+// GESTION DES PAIEMENTS
+// ============================================
+
+enum PaymentMethod {
+  CASH      // Espèces
+  TMONEY    // TMoney (Togo)
+  FLOOZ     // Flooz (Togo)
+  CARD      // Carte bancaire
+  MOBILE    // Paiement mobile générique
+  OTHER     // Autre
+}
+
+enum PaymentStatus {
+  PENDING   // En attente
+  COMPLETED // Complété
+  FAILED    // Échoué
+  REFUNDED  // Remboursé
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  method        PaymentMethod
+  status        PaymentStatus @default(COMPLETED)
+  amount        Decimal       @db.Decimal(10, 2)
+  reference     String?       // Référence de transaction
+  userId        String        // Utilisateur qui a enregistré le paiement
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
