@@ -5,6 +5,8 @@ import type {
   Product,
   Order,
   Payment,
+  Option,
+  Table,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -156,6 +158,67 @@ export const paymentsApi = {
 
   getTodayStats: async () => {
     const response = await api.get<ApiResponse<any>>('/api/payments/stats/today');
+    return response.data;
+  },
+};
+
+// Options API
+export const optionsApi = {
+  getAll: async (params?: { type?: string }) => {
+    const response = await api.get<ApiResponse<Option[]>>('/api/options', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Option>>(`/api/options/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Option>) => {
+    const response = await api.post<ApiResponse<Option>>('/api/options', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Option>) => {
+    const response = await api.put<ApiResponse<Option>>(`/api/options/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete<ApiResponse<Option>>(`/api/options/${id}`);
+    return response.data;
+  },
+};
+
+// Tables API
+export const tablesApi = {
+  getAll: async () => {
+    const response = await api.get<ApiResponse<Table[]>>('/api/tables');
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Table>>(`/api/tables/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Table>) => {
+    const response = await api.post<ApiResponse<Table>>('/api/tables', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Table>) => {
+    const response = await api.put<ApiResponse<Table>>(`/api/tables/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete<ApiResponse<Table>>(`/api/tables/${id}`);
+    return response.data;
+  },
+
+  getAvailable: async () => {
+    const response = await api.get<ApiResponse<Table[]>>('/api/tables/status/available');
     return response.data;
   },
 };

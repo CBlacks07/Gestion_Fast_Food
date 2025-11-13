@@ -8,6 +8,9 @@ import categoriesRoutes from './routes/categories';
 import productsRoutes from './routes/products';
 import ordersRoutes from './routes/orders';
 import paymentsRoutes from './routes/payments';
+import optionsRoutes from './routes/options';
+import tablesRoutes from './routes/tables';
+import ingredientsRoutes from './routes/ingredients';
 
 dotenv.config();
 
@@ -42,7 +45,10 @@ app.get('/', async () => {
       categories: '/api/categories',
       products: '/api/products',
       orders: '/api/orders',
-      payments: '/api/payments'
+      payments: '/api/payments',
+      options: '/api/options',
+      tables: '/api/tables',
+      ingredients: '/api/ingredients'
     }
   };
 });
@@ -52,6 +58,9 @@ app.register(categoriesRoutes, { prefix: '/api/categories' });
 app.register(productsRoutes, { prefix: '/api/products' });
 app.register(ordersRoutes, { prefix: '/api/orders' });
 app.register(paymentsRoutes, { prefix: '/api/payments' });
+app.register(optionsRoutes, { prefix: '/api/options' });
+app.register(tablesRoutes, { prefix: '/api/tables' });
+app.register(ingredientsRoutes, { prefix: '/api/ingredients' });
 
 // Démarrage du serveur
 const start = async () => {
