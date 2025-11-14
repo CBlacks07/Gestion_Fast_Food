@@ -237,12 +237,25 @@ export default async function productsRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const { userId } = request.body as { userId?: string };
 
+      // Vérifier si le produit existe
+      const existingProduct = await prisma.product.findUnique({
+        where: { id },
+      });
+
+      if (!existingProduct) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Produit non trouvé',
+        });
+      }
+
+      // Soft delete: désactiver le produit au lieu de le supprimer
       const product = await prisma.product.update({
         where: { id },
         data: { isActive: false },
       });
 
-      // Log activity
+      // Log activity (optionnel)
       if (userId) {
         await logActivity({
           type: 'PRODUCT_DELETED',

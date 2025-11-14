@@ -51,17 +51,21 @@ export default function ProductsManagementPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    const product = products.find(p => p.id === id);
+    if (!confirm(`Êtes-vous sûr de vouloir désactiver "${product?.name}" ?\n\nNote: Le produit sera désactivé mais restera dans l'historique.`)) return;
 
     try {
       const response = await productsApi.delete(id);
       if (response.success) {
-        alert('Produit supprimé avec succès');
+        alert('Produit désactivé avec succès');
         loadData();
+      } else {
+        alert(response.error || 'Erreur lors de la désactivation du produit');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la suppression');
+      const errorMsg = error.response?.data?.error || error.message || 'Erreur lors de la désactivation du produit';
+      alert(errorMsg);
     }
   };
 
@@ -91,11 +95,12 @@ export default function ProductsManagementPage() {
     return icons[type] || '🍽️';
   };
 
-  // Filtrage
+  // Filtrage (ne montrer que les produits actifs)
   const filteredProducts = products.filter((product) => {
     const matchSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCategory = !filterCategory || product.categoryId === filterCategory;
-    return matchSearch && matchCategory;
+    const isActiveProduct = product.isActive !== false; // Afficher seulement les produits actifs
+    return matchSearch && matchCategory && isActiveProduct;
   });
 
   if (!isAdmin) {
@@ -191,7 +196,9 @@ export default function ProductsManagementPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-2xl">{getTypeIcon(product.type)}</span>
+                      <span className="text-2xl">
+                        {product.category?.icon || getTypeIcon(product.type)}
+                      </span>
                       <h3 className="font-bold text-gray-900">{product.name}</h3>
                     </div>
                     {product.description && (
