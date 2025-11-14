@@ -2,11 +2,13 @@ import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
 
 export default async function usersRoutes(app: FastifyInstance) {
-  // GET /api/users - Liste tous les utilisateurs actifs
+  // GET /api/users - Liste tous les utilisateurs
   app.get('/', async (request, reply) => {
     try {
+      const { includeInactive } = request.query as { includeInactive?: string };
+
       const users = await prisma.user.findMany({
-        where: { isActive: true },
+        where: includeInactive === 'true' ? {} : { isActive: true },
         select: {
           id: true,
           email: true,
@@ -29,6 +31,173 @@ export default async function usersRoutes(app: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Erreur lors de la récupération des utilisateurs',
+      });
+    }
+  });
+
+  // POST /api/users - Créer un nouvel utilisateur
+  app.post('/', async (request, reply) => {
+    try {
+      const { email, username, password, firstName, lastName, role } = request.body as {
+        email: string;
+        username: string;
+        password: string;
+        firstName?: string;
+        lastName?: string;
+        role: string;
+      };
+
+      // Vérifier si l'email ou le username existe déjà
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ email }, { username }],
+        },
+      });
+
+      if (existingUser) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Un utilisateur avec cet email ou ce nom d\'utilisateur existe déjà',
+        });
+      }
+
+      const user = await prisma.user.create({
+        data: {
+          email,
+          username,
+          password, // En production, il faudrait hasher le mot de passe
+          firstName,
+          lastName,
+          role: role as any,
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      return reply.status(201).send({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur lors de la création de l\'utilisateur',
+      });
+    }
+  });
+
+  // PUT /api/users/:id - Mettre à jour un utilisateur
+  app.put('/:id', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const { email, username, password, firstName, lastName, role, isActive } = request.body as {
+        email?: string;
+        username?: string;
+        password?: string;
+        firstName?: string;
+        lastName?: string;
+        role?: string;
+        isActive?: boolean;
+      };
+
+      // Vérifier si l'email ou le username existe déjà (pour un autre utilisateur)
+      if (email || username) {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            AND: [
+              { id: { not: id } },
+              {
+                OR: [
+                  email ? { email } : {},
+                  username ? { username } : {},
+                ].filter((obj) => Object.keys(obj).length > 0),
+              },
+            ],
+          },
+        });
+
+        if (existingUser) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Un autre utilisateur avec cet email ou ce nom d\'utilisateur existe déjà',
+          });
+        }
+      }
+
+      const updateData: any = {};
+      if (email !== undefined) updateData.email = email;
+      if (username !== undefined) updateData.username = username;
+      if (password !== undefined) updateData.password = password; // En production, hasher
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (role !== undefined) updateData.role = role;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur lors de la mise à jour de l\'utilisateur',
+      });
+    }
+  });
+
+  // DELETE /api/users/:id - Supprimer (désactiver) un utilisateur
+  app.delete('/:id', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isActive: true,
+        },
+      });
+
+      return reply.send({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Erreur lors de la suppression de l\'utilisateur',
       });
     }
   });

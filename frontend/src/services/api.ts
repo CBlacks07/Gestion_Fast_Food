@@ -286,8 +286,38 @@ export const ingredientsApi = {
 
 // Users API
 export const usersApi = {
-  getAll: async () => {
-    const response = await api.get<ApiResponse<any[]>>('/api/users');
+  getAll: async (params?: { includeInactive?: boolean }) => {
+    const response = await api.get<ApiResponse<any[]>>('/api/users', { params });
+    return response.data;
+  },
+
+  create: async (data: {
+    email: string;
+    username: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    role: string;
+  }) => {
+    const response = await api.post<ApiResponse<any>>('/api/users', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: {
+    email?: string;
+    username?: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    isActive?: boolean;
+  }) => {
+    const response = await api.put<ApiResponse<any>>(`/api/users/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete<ApiResponse<any>>(`/api/users/${id}`);
     return response.data;
   },
 

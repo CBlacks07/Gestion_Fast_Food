@@ -6,6 +6,9 @@ import OrdersPage from './pages/OrdersPage';
 import DashboardPage from './pages/DashboardPage';
 import StockPage from './pages/StockPage';
 import TeamPage from './pages/TeamPage';
+import ProductsManagementPage from './pages/ProductsManagementPage';
+import CategoriesManagementPage from './pages/CategoriesManagementPage';
+import UsersManagementPage from './pages/UsersManagementPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -25,6 +28,9 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/stock" element={<StockPage />} />
           <Route path="/team" element={<TeamPage />} />
+          <Route path="/products-management" element={<ProductsManagementPage />} />
+          <Route path="/categories-management" element={<CategoriesManagementPage />} />
+          <Route path="/users-management" element={<UsersManagementPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

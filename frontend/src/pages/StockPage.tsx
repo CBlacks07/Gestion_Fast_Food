@@ -313,8 +313,8 @@ function StockMovementModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6 border-b flex items-center justify-between">
+      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+        <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">
             Mouvement de stock - {ingredient.name}
           </h2>
@@ -325,7 +325,7 @@ function StockMovementModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* Current Stock Display */}
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-sm text-gray-600">Stock actuel</div>

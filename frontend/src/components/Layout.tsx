@@ -22,6 +22,12 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/team', label: 'Équipe', icon: '👥', adminOnly: true },
   ].filter((item) => !item.adminOnly || isAdmin);
 
+  const adminMenuItems = [
+    { path: '/products-management', label: 'Produits', icon: '🍔' },
+    { path: '/categories-management', label: 'Catégories', icon: '📂' },
+    { path: '/users-management', label: 'Utilisateurs', icon: '👤' },
+  ];
+
   return (
     <div className="h-screen flex bg-gray-50">
       {/* Sidebar */}
@@ -35,7 +41,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
 
@@ -57,6 +63,38 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
               </button>
             );
           })}
+
+          {/* Admin Menu Section */}
+          {isAdmin && adminMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <div className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Gestion
+                </div>
+              </div>
+              {adminMenuItems.map((item) => {
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`
+                      w-full px-4 py-3 rounded-lg font-medium text-left transition-colors
+                      flex items-center gap-3
+                      ${isActive
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                      }
+                    `}
+                  >
+                    <span className="text-xl">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* User info */}
