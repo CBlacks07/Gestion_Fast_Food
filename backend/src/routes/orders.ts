@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 // Fonction pour générer un numéro de commande unique
 function generateOrderNumber(): string {
@@ -272,15 +273,13 @@ export default async function ordersRoutes(app: FastifyInstance) {
       // TODO: Déstockage automatique des ingrédients
 
       // Log activity
-      await prisma.activityLog.create({
-        data: {
-          type: 'ORDER_CREATED',
-          userId,
-          targetId: order.id,
-          description: `Commande créée: ${orderNumber} (${total.toFixed(2)} F CFA)`,
-          metadata: JSON.stringify({ type, total, itemCount: items.length }),
-        },
-      }).catch((err) => request.log.error('Failed to log activity:', err));
+      await logActivity({
+        type: 'ORDER_CREATED',
+        userId,
+        targetId: order.id,
+        description: `Commande créée: ${orderNumber} (${total.toFixed(2)} F CFA)`,
+        metadata: { type, total, itemCount: items.length },
+      });
 
       return reply.status(201).send({
         success: true,
@@ -343,15 +342,13 @@ export default async function ordersRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'ORDER_CANCELLED',
-            userId,
-            targetId: id,
-            description: `Commande annulée: ${order.orderNumber}`,
-            metadata: JSON.stringify({ total: order.total }),
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'ORDER_CANCELLED',
+          userId,
+          targetId: id,
+          description: `Commande annulée: ${order.orderNumber}`,
+          metadata: { total: order.total },
+        });
       }
 
       return reply.send({

@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function categoriesRoutes(app: FastifyInstance) {
   // GET /api/categories - Liste toutes les catégories actives
@@ -95,14 +96,12 @@ export default async function categoriesRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'CATEGORY_CREATED',
-            userId,
-            targetId: category.id,
-            description: `Catégorie créée: ${name}`,
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'CATEGORY_CREATED',
+          userId,
+          targetId: category.id,
+          description: `Catégorie créée: ${name}`,
+        });
       }
 
       return reply.status(201).send({
@@ -144,15 +143,13 @@ export default async function categoriesRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'CATEGORY_UPDATED',
-            userId,
-            targetId: id,
-            description: `Catégorie modifiée: ${name || category.name}`,
-            metadata: JSON.stringify({ isActive }),
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'CATEGORY_UPDATED',
+          userId,
+          targetId: id,
+          description: `Catégorie modifiée: ${name || category.name}`,
+          metadata: { isActive },
+        });
       }
 
       return reply.send({
@@ -181,14 +178,12 @@ export default async function categoriesRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'CATEGORY_DELETED',
-            userId,
-            targetId: id,
-            description: `Catégorie désactivée: ${category.name}`,
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'CATEGORY_DELETED',
+          userId,
+          targetId: id,
+          description: `Catégorie désactivée: ${category.name}`,
+        });
       }
 
       return reply.send({

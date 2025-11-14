@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/login - Connexion
@@ -40,14 +41,12 @@ export default async function authRoutes(app: FastifyInstance) {
       const { password: _, ...userWithoutPassword } = user;
 
       // Log activity
-      await prisma.activityLog.create({
-        data: {
-          type: 'USER_LOGIN',
-          userId: user.id,
-          description: `Connexion réussie: ${user.username}`,
-          ipAddress: request.ip,
-        },
-      }).catch((err) => request.log.error('Failed to log activity:', err));
+      await logActivity({
+        type: 'USER_LOGIN',
+        userId: user.id,
+        description: `Connexion réussie: ${user.username}`,
+        ipAddress: request.ip,
+      });
 
       return reply.send({
         success: true,

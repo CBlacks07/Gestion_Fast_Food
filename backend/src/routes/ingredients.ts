@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function ingredientsRoutes(app: FastifyInstance) {
   // GET /api/ingredients - Liste tous les ingrédients
@@ -200,15 +201,13 @@ export default async function ingredientsRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'STOCK_ADJUSTED',
-            userId,
-            targetId: id,
-            description: `Stock ajusté: ${ingredient.name} (${quantity > 0 ? '+' : ''}${quantity} ${ingredient.unit})`,
-            metadata: JSON.stringify({ type, quantity, newStock, reason }),
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'STOCK_ADJUSTED',
+          userId,
+          targetId: id,
+          description: `Stock ajusté: ${ingredient.name} (${quantity > 0 ? '+' : ''}${quantity} ${ingredient.unit})`,
+          metadata: { type, quantity, newStock, reason },
+        });
       }
 
       return reply.status(201).send({

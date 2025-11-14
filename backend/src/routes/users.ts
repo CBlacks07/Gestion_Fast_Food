@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function usersRoutes(app: FastifyInstance) {
   // GET /api/users - Liste tous les utilisateurs
@@ -220,13 +221,11 @@ export default async function usersRoutes(app: FastifyInstance) {
       });
 
       // Logger l'activité
-      await prisma.activityLog.create({
-        data: {
-          type: 'USER_DELETED',
-          userId: currentUserId,
-          targetId: id,
-          description: `Utilisateur désactivé: ${targetUser.username}`,
-        },
+      await logActivity({
+        type: 'USER_DELETED',
+        userId: currentUserId,
+        targetId: id,
+        description: `Utilisateur désactivé: ${targetUser.username}`,
       });
 
       return reply.send({

@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function closuresRoutes(app: FastifyInstance) {
   // GET /api/closures - Liste toutes les clôtures
@@ -244,16 +245,14 @@ export default async function closuresRoutes(app: FastifyInstance) {
       });
 
       // Logger l'activité
-      await prisma.activityLog.create({
-        data: {
-          type: 'DAILY_CLOSURE',
-          userId,
-          targetId: closure.id,
-          description: `Clôture de journée effectuée pour le ${targetDate.toLocaleDateString('fr-FR')}`,
-          metadata: JSON.stringify({
-            totalRevenue,
-            totalOrders,
-          }),
+      await logActivity({
+        type: 'DAILY_CLOSURE',
+        userId,
+        targetId: closure.id,
+        description: `Clôture de journée effectuée pour le ${targetDate.toLocaleDateString('fr-FR')}`,
+        metadata: {
+          totalRevenue,
+          totalOrders,
         },
       });
 

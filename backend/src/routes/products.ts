@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
+import { logActivity } from '../utils/activityLogger';
 
 export default async function productsRoutes(app: FastifyInstance) {
   // GET /api/products - Liste tous les produits
@@ -140,15 +141,13 @@ export default async function productsRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'PRODUCT_CREATED',
-            userId,
-            targetId: product.id,
-            description: `Produit créé: ${name}`,
-            metadata: JSON.stringify({ price, categoryId }),
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'PRODUCT_CREATED',
+          userId,
+          targetId: product.id,
+          description: `Produit créé: ${name}`,
+          metadata: { price, categoryId },
+        });
       }
 
       return reply.status(201).send({
@@ -210,15 +209,13 @@ export default async function productsRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'PRODUCT_UPDATED',
-            userId,
-            targetId: id,
-            description: `Produit modifié: ${name || product.name}`,
-            metadata: JSON.stringify({ price, isAvailable, isActive }),
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'PRODUCT_UPDATED',
+          userId,
+          targetId: id,
+          description: `Produit modifié: ${name || product.name}`,
+          metadata: { price, isAvailable, isActive },
+        });
       }
 
       return reply.send({
@@ -247,14 +244,12 @@ export default async function productsRoutes(app: FastifyInstance) {
 
       // Log activity
       if (userId) {
-        await prisma.activityLog.create({
-          data: {
-            type: 'PRODUCT_DELETED',
-            userId,
-            targetId: id,
-            description: `Produit désactivé: ${product.name}`,
-          },
-        }).catch((err) => request.log.error('Failed to log activity:', err));
+        await logActivity({
+          type: 'PRODUCT_DELETED',
+          userId,
+          targetId: id,
+          description: `Produit désactivé: ${product.name}`,
+        });
       }
 
       return reply.send({
