@@ -32,13 +32,13 @@ echo "🔄 Exécution des migrations..."
 cd backend
 
 # Vérifier si les tables existent déjà
-TABLE_EXISTS=$(PGPASSWORD=postgres psql -h localhost -U postgres -d fastfood_db -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'activity_logs');")
+TABLE_EXISTS=$(PGPASSWORD=Admin123 psql -h localhost -U postgres -d fastfood_db -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'activity_logs');")
 
 if [ "$TABLE_EXISTS" = "t" ]; then
     echo "✅ Les tables de migration existent déjà"
 else
     echo "📝 Application de la migration add_closures_and_logs.sql..."
-    PGPASSWORD=postgres psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
+    PGPASSWORD=Admin123 psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
 
     if [ $? -eq 0 ]; then
         echo "✅ Migration appliquée avec succès!"

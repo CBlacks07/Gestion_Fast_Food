@@ -35,11 +35,11 @@ echo ""
 
 # Créer la base de données si elle n'existe pas
 echo "🔄 Vérification de la base de données..."
-PGPASSWORD=postgres psql -h localhost -U postgres -lqt | cut -d \| -f 1 | grep -qw fastfood_db
+PGPASSWORD=Admin123 psql -h localhost -U postgres -lqt | cut -d \| -f 1 | grep -qw fastfood_db
 
 if [ $? -ne 0 ]; then
     echo "📝 Création de la base de données 'fastfood_db'..."
-    PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE fastfood_db;"
+    PGPASSWORD=Admin123 psql -h localhost -U postgres -c "CREATE DATABASE fastfood_db;"
 
     if [ $? -eq 0 ]; then
         echo "✅ Base de données créée"
@@ -57,7 +57,7 @@ echo ""
 echo "🔄 Exécution de la migration SQL..."
 cd backend
 
-PGPASSWORD=postgres psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
+PGPASSWORD=Admin123 psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
 
 if [ $? -eq 0 ]; then
     echo ""

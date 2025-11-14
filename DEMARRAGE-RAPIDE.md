@@ -32,7 +32,7 @@ Dans le terminal de votre projet, exécutez:
 
 ```bash
 cd backend
-PGPASSWORD=postgres psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
+PGPASSWORD=Admin123 psql -h localhost -U postgres -d fastfood_db -f add_closures_and_logs.sql
 ```
 
 ### Étape 3: Redémarrer le backend
