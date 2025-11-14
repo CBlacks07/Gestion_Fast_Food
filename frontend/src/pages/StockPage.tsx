@@ -180,22 +180,22 @@ export default function StockPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleOpenStockModal(ingredient)}
-                    className="flex-1 px-3 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 font-medium rounded-lg text-sm transition-colors"
-                  >
-                    📝 Mouvement
-                  </button>
-                  {isAdmin && (
+                {isAdmin && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOpenStockModal(ingredient)}
+                      className="flex-1 px-3 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 font-medium rounded-lg text-sm transition-colors"
+                    >
+                      📝 Mouvement
+                    </button>
                     <button
                       onClick={() => handleOpenEditModal(ingredient)}
                       className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors"
                     >
                       ✏️
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -80,9 +80,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4">
+      <header className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">📊 Tableau de Bord</h1>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Content */}
-      <div className="p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Cartes de statistiques principales */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total des ventes */}

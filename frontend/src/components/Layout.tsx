@@ -5,18 +5,22 @@ interface LayoutProps {
   children: ReactNode;
   onLogout: () => void;
   username: string;
+  userRole: string;
 }
 
-export default function Layout({ children, onLogout, username }: LayoutProps) {
+export default function Layout({ children, onLogout, username, userRole }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isAdmin = userRole === 'ADMIN';
+
   const menuItems = [
-    { path: '/pos', label: 'Point de Vente', icon: '🛒' },
-    { path: '/orders', label: 'Commandes', icon: '📋' },
-    { path: '/dashboard', label: 'Statistiques', icon: '📊' },
-    { path: '/stock', label: 'Stocks', icon: '📦' },
-  ];
+    { path: '/pos', label: 'Point de Vente', icon: '🛒', adminOnly: false },
+    { path: '/orders', label: 'Commandes', icon: '📋', adminOnly: false },
+    { path: '/dashboard', label: 'Statistiques', icon: '📊', adminOnly: false },
+    { path: '/stock', label: 'Stocks', icon: '📦', adminOnly: false },
+    { path: '/team', label: 'Équipe', icon: '👥', adminOnly: true },
+  ].filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -68,7 +72,11 @@ export default function Layout({ children, onLogout, username }: LayoutProps) {
           </div>
 
           <button
-            onClick={onLogout}
+            onClick={() => {
+              if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                onLogout();
+              }
+            }}
             className="w-full px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             Se déconnecter

@@ -284,6 +284,28 @@ export const ingredientsApi = {
   },
 };
 
+// Users API
+export const usersApi = {
+  getAll: async () => {
+    const response = await api.get<ApiResponse<any[]>>('/api/users');
+    return response.data;
+  },
+
+  getUserStats: async (userId: string, date?: string) => {
+    const response = await api.get<ApiResponse<any>>(`/api/users/${userId}/stats`, {
+      params: date ? { date } : {},
+    });
+    return response.data;
+  },
+
+  getAllUsersStats: async (date?: string) => {
+    const response = await api.get<ApiResponse<any>>('/api/users/stats/all', {
+      params: date ? { date } : {},
+    });
+    return response.data;
+  },
+};
+
 // Health check
 export const healthCheck = async () => {
   const response = await api.get('/health');
