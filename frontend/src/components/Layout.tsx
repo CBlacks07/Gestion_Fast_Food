@@ -19,6 +19,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/orders', label: 'Commandes', icon: '📋', adminOnly: false },
     { path: '/dashboard', label: 'Statistiques', icon: '📊', adminOnly: false },
     { path: '/stock', label: 'Stocks', icon: '📦', adminOnly: false },
+    { path: '/closures', label: 'Clôtures', icon: '🔒', adminOnly: false },
     { path: '/team', label: 'Équipe', icon: '👥', adminOnly: true },
   ].filter((item) => !item.adminOnly || isAdmin);
 
@@ -26,7 +27,6 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/products-management', label: 'Produits', icon: '🍔' },
     { path: '/categories-management', label: 'Catégories', icon: '📂' },
     { path: '/users-management', label: 'Utilisateurs', icon: '👤' },
-    { path: '/closures', label: 'Clôtures', icon: '📊' },
   ];
 
   return (

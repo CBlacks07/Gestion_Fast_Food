@@ -363,7 +363,7 @@ model DailyClosure {
   // Relations
   user              User     @relation(fields: [closedBy], references: [id])
 
-  @@unique([date]) // Une seule clôture par jour
+  @@unique([date, closedBy]) // Une seule clôture par jour et par utilisateur
   @@map("daily_closures")
 }
 

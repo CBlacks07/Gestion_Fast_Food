@@ -42,7 +42,7 @@ CREATE TABLE "daily_closures" (
   "notes" TEXT,
 
   CONSTRAINT "daily_closures_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "daily_closures_date_key" UNIQUE ("date")
+  CONSTRAINT "daily_closures_date_closedBy_key" UNIQUE ("date", "closedBy")
 );
 
 -- Create activity_logs table

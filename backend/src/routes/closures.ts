@@ -3,10 +3,18 @@ import prisma from '../utils/prisma';
 import { logActivity } from '../utils/activityLogger';
 
 export default async function closuresRoutes(app: FastifyInstance) {
-  // GET /api/closures - Liste toutes les clôtures
+  // GET /api/closures - Liste toutes les clôtures (avec filtrage optionnel par userId)
   app.get('/', async (request, reply) => {
     try {
+      const { userId } = request.query as { userId?: string };
+
+      const where: any = {};
+      if (userId) {
+        where.closedBy = userId;
+      }
+
       const closures = await prisma.dailyClosure.findMany({
+        where,
         include: {
           user: {
             select: {
@@ -269,13 +277,34 @@ export default async function closuresRoutes(app: FastifyInstance) {
     }
   });
 
-  // GET /api/closures/check/:date - Vérifier si une clôture existe pour une date
+  // GET /api/closures/check/:date - Vérifier si une clôture existe pour une date (optionnellement pour un utilisateur)
   app.get('/check/:date', async (request, reply) => {
     try {
       const { date } = request.params as { date: string };
+      const { userId } = request.query as { userId?: string };
       const targetDate = new Date(date);
       targetDate.setHours(0, 0, 0, 0);
 
+      // Si userId est fourni, vérifier si cet utilisateur a déjà clôturé cette date
+      if (userId) {
+        const closure = await prisma.dailyClosure.findFirst({
+          where: {
+            date: targetDate,
+            closedBy: userId,
+          },
+          select: { id: true, closedAt: true },
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            exists: !!closure,
+            closure,
+          },
+        });
+      }
+
+      // Sinon, vérifier si la date a été clôturée par n'importe qui (pour admin)
       const closure = await prisma.dailyClosure.findUnique({
         where: { date: targetDate },
         select: { id: true, closedAt: true },

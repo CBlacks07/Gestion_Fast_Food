@@ -340,8 +340,9 @@ export const usersApi = {
 
 // Closures API
 export const closuresApi = {
-  getAll: async () => {
-    const response = await api.get<ApiResponse<any[]>>('/api/closures');
+  getAll: async (userId?: string) => {
+    const params = userId ? { userId } : {};
+    const response = await api.get<ApiResponse<any[]>>('/api/closures', { params });
     return response.data;
   },
 
@@ -355,8 +356,9 @@ export const closuresApi = {
     return response.data;
   },
 
-  checkExists: async (date: string) => {
-    const response = await api.get<ApiResponse<{ exists: boolean; closure: any }>>(`/api/closures/check/${date}`);
+  checkExists: async (date: string, userId?: string) => {
+    const params = userId ? { userId } : {};
+    const response = await api.get<ApiResponse<{ exists: boolean; closure: any }>>(`/api/closures/check/${date}`, { params });
     return response.data;
   },
 };

@@ -38,14 +38,19 @@ export default function ClosuresPage() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   useEffect(() => {
-    if (!isAdmin) return;
-    loadClosures();
-  }, [isAdmin]);
+    if (user) {
+      loadClosures();
+    }
+  }, [user]);
 
   const loadClosures = async () => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
-      const response = await closuresApi.getAll();
+      // Si admin: charger toutes les clôtures
+      // Si utilisateur normal: charger seulement les siennes
+      const response = await closuresApi.getAll(isAdmin ? undefined : user.id);
       if (response.success && response.data) {
         setClosures(response.data);
       }
@@ -57,26 +62,18 @@ export default function ClosuresPage() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux administrateurs et gérants</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">📊 Clôture de Journée</h1>
-            <p className="text-sm text-gray-500 mt-1">Générez les rapports de clôture journaliers</p>
+            <h1 className="text-2xl font-bold text-gray-900">🔒 Clôture de Journée</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {isAdmin
+                ? 'Consultez toutes les clôtures journalières'
+                : 'Clôturez votre journée de travail'}
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -99,92 +96,111 @@ export default function ClosuresPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Chargement...</div>
           </div>
         ) : closures.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="font-medium">Aucune clôture trouvée</p>
-            <p className="text-sm mt-1">Créez votre première clôture de journée</p>
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📋</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune clôture</h3>
+            <p className="text-gray-500 mb-4">
+              {isAdmin
+                ? 'Aucune clôture n\'a encore été effectuée'
+                : 'Vous n\'avez pas encore effectué de clôture'}
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+            >
+              ➕ Créer une clôture
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {closures.map((closure) => (
-              <div
-                key={closure.id}
-                onClick={() => {
-                  setSelectedClosure(closure);
-                  setShowDetailModal(true);
-                }}
-                className="bg-white rounded-lg p-6 border-2 border-gray-200 hover:border-primary-300 cursor-pointer transition-all"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-900">
-                      {new Date(closure.date).toLocaleDateString('fr-FR', {
+            {closures.map((closure) => {
+              const closureDate = new Date(closure.date);
+              const closedAtDate = new Date(closure.closedAt);
+
+              return (
+                <div
+                  key={closure.id}
+                  className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    setSelectedClosure(closure);
+                    setShowDetailModal(true);
+                  }}
+                >
+                  {/* Date */}
+                  <div className="mb-4">
+                    <div className="text-lg font-semibold text-gray-900">
+                      {closureDate.toLocaleDateString('fr-FR', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric',
+                        day: 'numeric'
                       })}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Clôturée le {new Date(closure.closedAt).toLocaleString('fr-FR')}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Par {closure.user.firstName && closure.user.lastName
-                        ? `${closure.user.firstName} ${closure.user.lastName}`
-                        : closure.user.username}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Stats principales */}
-                <div className="space-y-3 mb-4">
-                  <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg p-4 text-white">
-                    <div className="text-xs opacity-90 mb-1">Chiffre d'affaires</div>
-                    <div className="text-2xl font-bold">{Number(closure.totalRevenue).toLocaleString()} FCFA</div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-green-50 rounded-lg p-3">
-                      <div className="text-xs text-green-600 mb-1">Commandes</div>
-                      <div className="text-xl font-bold text-green-700">{closure.totalOrders}</div>
                     </div>
-
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <div className="text-xs text-blue-600 mb-1">Complétées</div>
-                      <div className="text-xl font-bold text-blue-700">{closure.completedOrders}</div>
+                    <div className="text-sm text-gray-500">
+                      Clôturé le {closedAtDate.toLocaleString('fr-FR')}
                     </div>
                   </div>
-                </div>
 
-                {/* Footer */}
-                <div className="pt-3 border-t">
-                  <button className="text-sm font-medium text-primary-600 hover:text-primary-700">
-                    Voir le détail →
-                  </button>
+                  {/* User (si admin) */}
+                  {isAdmin && (
+                    <div className="mb-3 flex items-center gap-2 text-sm">
+                      <span className="text-gray-500">Par:</span>
+                      <span className="font-medium text-gray-900">
+                        {closure.user.firstName && closure.user.lastName
+                          ? `${closure.user.firstName} ${closure.user.lastName}`
+                          : closure.user.username}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Revenus</span>
+                      <span className="font-semibold text-green-600">
+                        {Number(closure.totalRevenue).toLocaleString()} F CFA
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Commandes</span>
+                      <span className="font-medium text-gray-900">
+                        {closure.totalOrders} ({closure.completedOrders} complétées)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {closure.notes && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="text-xs text-gray-500 line-clamp-2">
+                        📝 {closure.notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action */}
+                  <div className="mt-4 text-sm text-primary-600 font-medium">
+                    Voir le rapport complet →
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Create Closure Modal */}
+      {/* Create Modal */}
       {showCreateModal && (
         <CreateClosureModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
-            loadClosures();
             setShowCreateModal(false);
+            loadClosures();
           }}
-          userId={user!.id}
         />
       )}
 
@@ -202,183 +218,317 @@ export default function ClosuresPage() {
   );
 }
 
-// Create Closure Modal
-function CreateClosureModal({
-  onClose,
-  onSuccess,
-  userId,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-  userId: string;
-}) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+// Modal de création de clôture
+function CreateClosureModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [closureExists, setClosureExists] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [alreadyExists, setAlreadyExists] = useState(false);
+
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    checkClosure();
-  }, [date]);
+    checkIfExists();
+  }, [selectedDate]);
 
-  const checkClosure = async () => {
+  const checkIfExists = async () => {
+    if (!user) return;
+
     try {
-      const response = await closuresApi.checkExists(date);
-      if (response.success) {
-        setClosureExists(response.data.exists);
+      const response = await closuresApi.checkExists(selectedDate, user.id);
+      if (response.success && response.data) {
+        setAlreadyExists(response.data.exists);
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Erreur vérification:', error);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async () => {
+    if (!user) return;
 
-    if (closureExists) {
-      alert('Une clôture existe déjà pour cette date');
-      return;
-    }
-
-    if (!confirm('Êtes-vous sûr de vouloir créer la clôture pour cette date ? Cette action est irréversible.')) {
+    if (alreadyExists) {
+      alert('Vous avez déjà clôturé cette journée');
       return;
     }
 
     try {
-      setIsProcessing(true);
+      setIsCreating(true);
       const response = await closuresApi.create({
-        date,
-        userId,
-        notes: notes || undefined,
+        date: selectedDate,
+        userId: user.id,
+        notes: notes.trim() || undefined,
       });
 
       if (response.success) {
-        alert('Clôture créée avec succès');
+        alert('Clôture créée avec succès!');
         onSuccess();
       }
     } catch (error: any) {
-      console.error('Erreur:', error);
+      console.error('Erreur création:', error);
       alert(error.response?.data?.error || 'Erreur lors de la création de la clôture');
     } finally {
-      setIsProcessing(false);
+      setIsCreating(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6 border-b flex items-center justify-between">
+        {/* Header */}
+        <div className="px-6 py-4 border-b flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">Nouvelle clôture</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
+            ×
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Body */}
+        <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date de la clôture *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date de clôture
+            </label>
             <input
               type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
               max={new Date().toISOString().split('T')[0]}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            {closureExists && (
-              <p className="text-sm text-red-600 mt-1">⚠️ Une clôture existe déjà pour cette date</p>
+            {alreadyExists && (
+              <p className="mt-2 text-sm text-red-600">
+                ⚠️ Vous avez déjà clôturé cette journée
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Notes (optionnel)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notes (optionnel)
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Observations, remarques particulières..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Ajoutez des notes sur cette journée..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             />
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-sm text-yellow-800">
-              <strong>⚠️ Attention :</strong> La clôture générera un rapport complet de la journée sélectionnée.
-              Cette action ne peut pas être annulée.
-            </p>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="flex gap-2">
+              <span className="text-yellow-600">⚠️</span>
+              <div className="text-sm text-yellow-800">
+                <strong>Attention:</strong> La clôture calculera automatiquement toutes vos transactions pour la journée sélectionnée.
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isProcessing}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={isProcessing || closureExists}
-              className="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg disabled:opacity-50"
-            >
-              {isProcessing ? 'Création...' : 'Créer la clôture'}
-            </button>
-          </div>
-        </form>
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={isCreating}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={isCreating || alreadyExists}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isCreating ? 'Création...' : 'Créer la clôture'}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Closure Detail Modal with Print
-function ClosureDetailModal({
-  closure,
-  onClose,
-}: {
-  closure: Closure;
-  onClose: () => void;
-}) {
-  const handlePrint = () => {
-    const printContent = document.getElementById('closure-report-print');
-    if (!printContent) return;
+// Modal de détail de clôture (avec impression)
+function ClosureDetailModal({ closure, onClose }: { closure: Closure; onClose: () => void }) {
+  const closureDate = new Date(closure.date);
+  const closedAtDate = new Date(closure.closedAt);
 
+  let detailedReport: any = {};
+  try {
+    detailedReport = JSON.parse(closure.detailedReport);
+  } catch (e) {
+    console.error('Error parsing detailed report:', e);
+  }
+
+  const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const date = closureDate.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Rapport de Clôture - ${new Date(closure.date).toLocaleDateString('fr-FR')}</title>
+          <title>Rapport de Clôture - ${date}</title>
           <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 40px;
+              line-height: 1.6;
+              color: #333;
             }
-            h1 { text-align: center; color: #1f2937; margin-bottom: 30px; }
-            h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-top: 30px; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-            .info-item { padding: 10px; background: #f3f4f6; border-radius: 4px; }
-            .info-label { font-weight: bold; color: #6b7280; font-size: 12px; }
-            .info-value { font-size: 16px; color: #1f2937; margin-top: 4px; }
-            .total-section { background: #3b82f6; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
-            .total-amount { font-size: 32px; font-weight: bold; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-            th { background: #f9fafb; font-weight: bold; }
-            .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+            h1 {
+              text-align: center;
+              margin-bottom: 10px;
+              color: #2563eb;
+              font-size: 28px;
+            }
+            .subtitle {
+              text-align: center;
+              color: #666;
+              margin-bottom: 30px;
+              font-size: 14px;
+            }
+            .section {
+              margin-bottom: 30px;
+              page-break-inside: avoid;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              color: #1f2937;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            th, td {
+              padding: 12px;
+              text-align: left;
+              border-bottom: 1px solid #e5e7eb;
+            }
+            th {
+              background-color: #f3f4f6;
+              font-weight: 600;
+              color: #374151;
+            }
+            .stat-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+              margin-top: 15px;
+            }
+            .stat-box {
+              background: #f9fafb;
+              padding: 15px;
+              border-radius: 8px;
+              border: 1px solid #e5e7eb;
+            }
+            .stat-label {
+              font-size: 12px;
+              color: #6b7280;
+              margin-bottom: 5px;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+              color: #1f2937;
+            }
+            .total {
+              background-color: #dbeafe;
+              font-weight: bold;
+            }
+            .notes {
+              background: #fef3c7;
+              padding: 15px;
+              border-radius: 8px;
+              border-left: 4px solid #f59e0b;
+              margin-top: 15px;
+            }
             @media print {
-              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+              body { padding: 20px; }
+              .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <h1>🔒 Rapport de Clôture de Journée</h1>
+          <div class="subtitle">
+            ${date}<br>
+            Clôturé le ${closedAtDate.toLocaleString('fr-FR')}<br>
+            Par ${closure.user.firstName && closure.user.lastName ? `${closure.user.firstName} ${closure.user.lastName}` : closure.user.username}
+          </div>
+
+          <div class="section">
+            <div class="section-title">📊 Statistiques Globales</div>
+            <div class="stat-grid">
+              <div class="stat-box">
+                <div class="stat-label">Chiffre d'affaires</div>
+                <div class="stat-value" style="color: #059669;">${Number(closure.totalRevenue).toLocaleString()} F</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Commandes totales</div>
+                <div class="stat-value">${closure.totalOrders}</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Commandes complétées</div>
+                <div class="stat-value" style="color: #2563eb;">${closure.completedOrders}</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Commandes annulées</div>
+                <div class="stat-value" style="color: #dc2626;">${closure.cancelledOrders}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">💰 Répartition par Mode de Paiement</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Mode de paiement</th>
+                  <th style="text-align: right;">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>💵 Espèces</td><td style="text-align: right;">${Number(closure.totalCash).toLocaleString()} F CFA</td></tr>
+                <tr><td>📱 TMoney</td><td style="text-align: right;">${Number(closure.totalTmoney).toLocaleString()} F CFA</td></tr>
+                <tr><td>📱 Flooz</td><td style="text-align: right;">${Number(closure.totalFlooz).toLocaleString()} F CFA</td></tr>
+                <tr><td>💳 Carte</td><td style="text-align: right;">${Number(closure.totalCard).toLocaleString()} F CFA</td></tr>
+                <tr><td>📲 Mobile</td><td style="text-align: right;">${Number(closure.totalMobile).toLocaleString()} F CFA</td></tr>
+                <tr><td>🔄 Autre</td><td style="text-align: right;">${Number(closure.totalOther).toLocaleString()} F CFA</td></tr>
+                <tr class="total">
+                  <td><strong>Total</strong></td>
+                  <td style="text-align: right;"><strong>${Number(closure.totalRevenue).toLocaleString()} F CFA</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          ${closure.notes ? `
+            <div class="section">
+              <div class="section-title">📝 Notes</div>
+              <div class="notes">${closure.notes}</div>
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 50px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+            Rapport généré automatiquement par le système de gestion Fast-Food
+          </div>
         </body>
       </html>
     `);
@@ -387,209 +537,146 @@ function ClosureDetailModal({
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-      printWindow.close();
     }, 250);
   };
 
-  const detailedReport = JSON.parse(closure.detailedReport);
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b flex items-center justify-between flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">Rapport de Clôture</h2>
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Rapport de clôture</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {closureDate.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
             >
               🖨️ Imprimer
             </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            >
+              ×
             </button>
           </div>
         </div>
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div id="closure-report-print">
-            {/* Header */}
-            <h1>Rapport de Clôture de Journée</h1>
-            <div style={{ textAlign: 'center', marginBottom: '30px', color: '#6b7280' }}>
-              {new Date(closure.date).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </div>
-
-            {/* Informations générales */}
-            <h2>Informations Générales</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <div className="info-label">Clôturée le</div>
-                <div className="info-value">{new Date(closure.closedAt).toLocaleString('fr-FR')}</div>
-              </div>
-              <div className="info-item">
-                <div className="info-label">Clôturée par</div>
-                <div className="info-value">
-                  {closure.user.firstName && closure.user.lastName
-                    ? `${closure.user.firstName} ${closure.user.lastName}`
-                    : closure.user.username}
-                </div>
+          {/* Statistiques */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="text-sm text-green-600 mb-1">Revenus totaux</div>
+              <div className="text-2xl font-bold text-green-700">
+                {Number(closure.totalRevenue).toLocaleString()} F
               </div>
             </div>
-
-            {/* Chiffre d'affaires */}
-            <div className="total-section">
-              <div style={{ fontSize: '14px', marginBottom: '10px', opacity: '0.9' }}>CHIFFRE D'AFFAIRES TOTAL</div>
-              <div className="total-amount">{Number(closure.totalRevenue).toLocaleString()} FCFA</div>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="text-sm text-blue-600 mb-1">Commandes</div>
+              <div className="text-2xl font-bold text-blue-700">{closure.totalOrders}</div>
             </div>
-
-            {/* Statistiques des commandes */}
-            <h2>Statistiques des Commandes</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <div className="info-label">Total des commandes</div>
-                <div className="info-value">{closure.totalOrders}</div>
-              </div>
-              <div className="info-item">
-                <div className="info-label">Commandes complétées</div>
-                <div className="info-value" style={{ color: '#059669' }}>{closure.completedOrders}</div>
-              </div>
-              <div className="info-item">
-                <div className="info-label">Commandes annulées</div>
-                <div className="info-value" style={{ color: '#dc2626' }}>{closure.cancelledOrders}</div>
-              </div>
-              <div className="info-item">
-                <div className="info-label">Panier moyen</div>
-                <div className="info-value">
-                  {closure.totalOrders > 0
-                    ? Math.round(Number(closure.totalRevenue) / closure.totalOrders).toLocaleString()
-                    : 0} FCFA
-                </div>
-              </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div className="text-sm text-purple-600 mb-1">Complétées</div>
+              <div className="text-2xl font-bold text-purple-700">{closure.completedOrders}</div>
             </div>
-
-            {/* Répartition des paiements */}
-            <h2>Répartition des Paiements</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Méthode de Paiement</th>
-                  <th style={{ textAlign: 'right' }}>Montant (FCFA)</th>
-                  <th style={{ textAlign: 'right' }}>Pourcentage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Number(closure.totalCash) > 0 && (
-                  <tr>
-                    <td>💵 Espèces</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalCash).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalCash) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-                {Number(closure.totalTmoney) > 0 && (
-                  <tr>
-                    <td>📱 TMoney</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalTmoney).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalTmoney) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-                {Number(closure.totalFlooz) > 0 && (
-                  <tr>
-                    <td>📱 Flooz</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalFlooz).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalFlooz) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-                {Number(closure.totalCard) > 0 && (
-                  <tr>
-                    <td>💳 Carte bancaire</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalCard).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalCard) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-                {Number(closure.totalMobile) > 0 && (
-                  <tr>
-                    <td>📲 Mobile</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalMobile).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalMobile) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-                {Number(closure.totalOther) > 0 && (
-                  <tr>
-                    <td>💰 Autre</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Number(closure.totalOther).toLocaleString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {Math.round((Number(closure.totalOther) / Number(closure.totalRevenue)) * 100)}%
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-            {/* Statistiques par utilisateur */}
-            {detailedReport.userStats && detailedReport.userStats.length > 0 && (
-              <>
-                <h2>Performance par Utilisateur</h2>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Utilisateur</th>
-                      <th style={{ textAlign: 'center' }}>Commandes</th>
-                      <th style={{ textAlign: 'center' }}>Complétées</th>
-                      <th style={{ textAlign: 'right' }}>Chiffre d'affaires</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailedReport.userStats.map((stat: any, index: number) => (
-                      <tr key={index}>
-                        <td>
-                          <strong>{stat.user.firstName && stat.user.lastName
-                            ? `${stat.user.firstName} ${stat.user.lastName}`
-                            : stat.user.username}</strong>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{stat.user.role}</div>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>{stat.totalOrders}</td>
-                        <td style={{ textAlign: 'center' }}>{stat.completedOrders}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{Math.round(stat.revenue).toLocaleString()} FCFA</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
-
-            {/* Notes */}
-            {closure.notes && (
-              <>
-                <h2>Notes</h2>
-                <div style={{ padding: '15px', background: '#f9fafb', borderRadius: '8px', whiteSpace: 'pre-wrap' }}>
-                  {closure.notes}
-                </div>
-              </>
-            )}
-
-            {/* Footer */}
-            <div className="footer">
-              <p>Document généré automatiquement par le système de gestion</p>
-              <p>Rapport généré le {new Date().toLocaleString('fr-FR')}</p>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="text-sm text-red-600 mb-1">Annulées</div>
+              <div className="text-2xl font-bold text-red-700">{closure.cancelledOrders}</div>
             </div>
           </div>
+
+          {/* Moyens de paiement */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">💰 Répartition par mode de paiement</h3>
+            <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Mode</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Montant</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">💵 Espèces</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalCash).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">📱 TMoney</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalTmoney).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">📱 Flooz</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalFlooz).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">💳 Carte</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalCard).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">📲 Mobile</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalMobile).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900">🔄 Autre</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {Number(closure.totalOther).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-100">
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                      {Number(closure.totalRevenue).toLocaleString()} F CFA
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {closure.notes && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 Notes</h3>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{closure.notes}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex items-center justify-between flex-shrink-0">
+          <div className="text-sm text-gray-500">
+            Clôturé le {closedAtDate.toLocaleString('fr-FR')} par {closure.user.username}
+          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Fermer
+          </button>
         </div>
       </div>
     </div>
