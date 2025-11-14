@@ -18,6 +18,24 @@ const api = axios.create({
   },
 });
 
+// Auth API
+export const authApi = {
+  login: async (username: string, password: string) => {
+    const response = await api.post<ApiResponse<any>>('/api/auth/login', {
+      username,
+      password,
+    });
+    return response.data;
+  },
+
+  getCurrentUser: async (userId: string) => {
+    const response = await api.get<ApiResponse<any>>('/api/auth/me', {
+      params: { userId },
+    });
+    return response.data;
+  },
+};
+
 // Categories API
 export const categoriesApi = {
   getAll: async () => {

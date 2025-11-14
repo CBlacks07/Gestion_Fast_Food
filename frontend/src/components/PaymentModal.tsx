@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
 import { ordersApi, paymentsApi } from '../services/api';
 import type { PaymentMethod } from '../types';
 
@@ -19,6 +20,8 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
     getTotal,
     clear,
   } = useCartStore();
+
+  const user = useAuthStore((state) => state.user);
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CASH');
   const [amountPaid, setAmountPaid] = useState<string>('');
@@ -48,6 +51,12 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
         return;
       }
 
+      // Vérifier qu'on a un utilisateur
+      if (!user || !user.id) {
+        setError('Utilisateur non authentifié');
+        return;
+      }
+
       // 1. Créer la commande
       const orderData = {
         type: orderType,
@@ -55,7 +64,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
         customerName,
         customerPhone,
         notes,
-        userId: 'temp-user-id', // TODO: Remplacer par l'ID utilisateur réel
+        userId: user.id,
         items: items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -80,7 +89,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
         method: selectedMethod,
         amount: total,
         reference: reference || undefined,
-        userId: 'temp-user-id', // TODO: Remplacer par l'ID utilisateur réel
+        userId: user.id,
       };
 
       const paymentResponse = await paymentsApi.create(paymentData);

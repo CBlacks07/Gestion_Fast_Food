@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import dotenv from 'dotenv';
 
 // Import des routes
+import authRoutes from './routes/auth';
 import categoriesRoutes from './routes/categories';
 import productsRoutes from './routes/products';
 import ordersRoutes from './routes/orders';
@@ -42,6 +43,7 @@ app.get('/', async () => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
+      auth: '/api/auth',
       categories: '/api/categories',
       products: '/api/products',
       orders: '/api/orders',
@@ -54,6 +56,7 @@ app.get('/', async () => {
 });
 
 // Enregistrement des routes API
+app.register(authRoutes, { prefix: '/api/auth' });
 app.register(categoriesRoutes, { prefix: '/api/categories' });
 app.register(productsRoutes, { prefix: '/api/products' });
 app.register(ordersRoutes, { prefix: '/api/orders' });

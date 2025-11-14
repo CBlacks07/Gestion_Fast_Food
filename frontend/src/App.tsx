@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import POSPage from './pages/POSPage';
 import OrdersPage from './pages/OrdersPage';
@@ -8,26 +8,15 @@ import StockPage from './pages/StockPage';
 import Layout from './components/Layout';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const { isAuthenticated, user, logout } = useAuthStore();
 
-  const handleLogin = (user: string) => {
-    setUsername(user);
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    setUsername('');
-    setIsAuthenticated(false);
-  };
-
-  if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
+  if (!isAuthenticated || !user) {
+    return <LoginPage />;
   }
 
   return (
     <BrowserRouter>
-      <Layout onLogout={handleLogout} username={username}>
+      <Layout onLogout={logout} username={user.username}>
         <Routes>
           <Route path="/" element={<Navigate to="/pos" replace />} />
           <Route path="/pos" element={<POSPage />} />
