@@ -1,5 +1,7 @@
 # 🚀 Démarrage Rapide
 
+> **📌 Vous êtes sur Windows?** Consultez plutôt [DEMARRAGE-WINDOWS.md](./DEMARRAGE-WINDOWS.md) pour des instructions adaptées à Windows PowerShell.
+
 ## Problème actuel
 
 Les erreurs 500 que vous voyez sont dues aux tables `daily_closures` et `activity_logs` qui n'existent pas encore dans la base de données.
