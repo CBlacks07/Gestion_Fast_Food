@@ -41,15 +41,21 @@ export default async function closuresRoutes(app: FastifyInstance) {
     }
   });
 
-  // GET /api/closures/:date - Récupérer une clôture par date
+  // GET /api/closures/:date - Récupérer une clôture par date (obsolète, utilisez /check/:date à la place)
   app.get('/:date', async (request, reply) => {
     try {
       const { date } = request.params as { date: string };
+      const { userId } = request.query as { userId?: string };
       const targetDate = new Date(date);
       targetDate.setHours(0, 0, 0, 0);
 
-      const closure = await prisma.dailyClosure.findUnique({
-        where: { date: targetDate },
+      const where: any = { date: targetDate };
+      if (userId) {
+        where.closedBy = userId;
+      }
+
+      const closure = await prisma.dailyClosure.findFirst({
+        where,
         include: {
           user: {
             select: {
@@ -96,15 +102,18 @@ export default async function closuresRoutes(app: FastifyInstance) {
       const endOfDay = new Date(targetDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Vérifier si une clôture existe déjà pour cette date
-      const existingClosure = await prisma.dailyClosure.findUnique({
-        where: { date: targetDate },
+      // Vérifier si cet utilisateur a déjà clôturé cette date
+      const existingClosure = await prisma.dailyClosure.findFirst({
+        where: {
+          date: targetDate,
+          closedBy: userId,
+        },
       });
 
       if (existingClosure) {
         return reply.status(400).send({
           success: false,
-          error: 'Une clôture existe déjà pour cette date',
+          error: 'Vous avez déjà clôturé cette date',
         });
       }
 
@@ -305,7 +314,7 @@ export default async function closuresRoutes(app: FastifyInstance) {
       }
 
       // Sinon, vérifier si la date a été clôturée par n'importe qui (pour admin)
-      const closure = await prisma.dailyClosure.findUnique({
+      const closure = await prisma.dailyClosure.findFirst({
         where: { date: targetDate },
         select: { id: true, closedAt: true },
       });

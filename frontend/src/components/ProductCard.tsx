@@ -30,7 +30,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
 
       {!product.image && (
         <div className="aspect-square mb-3 rounded-md bg-gradient-to-br from-primary-200 to-primary-300 flex items-center justify-center">
-          <span className="text-4xl">🍔</span>
+          <span className="text-4xl">{product.category?.icon || '🍔'}</span>
         </div>
       )}
 
