@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ordersApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import type { Order, OrderStatus } from '../types';
 
 export default function OrdersPage() {
@@ -7,6 +8,9 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === 'ADMIN';
 
   const statusOptions = [
     { value: 'all', label: 'Toutes', icon: '📋' },
@@ -41,8 +45,35 @@ export default function OrdersPage() {
     try {
       await ordersApi.updateStatus(orderId, newStatus);
       loadOrders();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(null);
+      }
     } catch (error) {
       console.error('Erreur de mise à jour:', error);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!isAdmin) {
+      alert('Seul un administrateur peut supprimer une commande');
+      return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.')) {
+      return;
+    }
+
+    try {
+      // On utilise l'endpoint DELETE qui met le statut à CANCELLED
+      await ordersApi.cancel(orderId);
+      loadOrders();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(null);
+      }
+      alert('Commande supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur de suppression:', error);
+      alert('Erreur lors de la suppression de la commande');
     }
   };
 
@@ -333,6 +364,24 @@ export default function OrdersPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Bouton de suppression (Admin uniquement) */}
+              {isAdmin && selectedOrder.status !== 'CANCELLED' && (
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={() => handleDeleteOrder(selectedOrder.id)}
+                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Supprimer la commande</span>
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    ⚠️ Cette action est irréversible (Admin uniquement)
+                  </p>
                 </div>
               )}
             </div>

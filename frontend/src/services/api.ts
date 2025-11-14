@@ -7,6 +7,8 @@ import type {
   Payment,
   Option,
   Table,
+  Ingredient,
+  StockMovement,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -237,6 +239,47 @@ export const tablesApi = {
 
   getAvailable: async () => {
     const response = await api.get<ApiResponse<Table[]>>('/api/tables/status/available');
+    return response.data;
+  },
+};
+
+// Ingredients API
+export const ingredientsApi = {
+  getAll: async (params?: { lowStock?: boolean }) => {
+    const response = await api.get<ApiResponse<Ingredient[]>>('/api/ingredients', { params });
+    return response.data;
+  },
+
+  getById: async (id: string) => {
+    const response = await api.get<ApiResponse<Ingredient>>(`/api/ingredients/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Partial<Ingredient>) => {
+    const response = await api.post<ApiResponse<Ingredient>>('/api/ingredients', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Ingredient>) => {
+    const response = await api.put<ApiResponse<Ingredient>>(`/api/ingredients/${id}`, data);
+    return response.data;
+  },
+
+  addStock: async (id: string, data: {
+    type: string;
+    quantity: number;
+    reason?: string;
+    reference?: string;
+  }) => {
+    const response = await api.post<ApiResponse<{ movement: StockMovement; ingredient: Ingredient }>>(
+      `/api/ingredients/${id}/stock`,
+      data
+    );
+    return response.data;
+  },
+
+  getLowStockAlerts: async () => {
+    const response = await api.get<ApiResponse<Ingredient[]>>('/api/ingredients/alerts/low-stock');
     return response.data;
   },
 };

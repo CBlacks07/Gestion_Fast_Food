@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { ordersApi, paymentsApi } from '../services/api';
+import { printReceipt } from '../utils/receiptPrinter';
 import type { PaymentMethod } from '../types';
 
 interface PaymentModalProps {
@@ -39,6 +40,18 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
     { value: 'MOBILE', label: 'Mobile', icon: '📲' },
   ];
 
+  // Montants rapides pour la calculette
+  const quickAmounts = [500, 1000, 2000, 5000, 10000];
+
+  const handleQuickAmount = (amount: number) => {
+    const currentAmount = parseFloat(amountPaid) || 0;
+    setAmountPaid((currentAmount + amount).toString());
+  };
+
+  const handleClearAmount = () => {
+    setAmountPaid('');
+  };
+
   const handlePayment = async () => {
     try {
       setIsProcessing(true);
@@ -46,7 +59,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
 
       const amount = parseFloat(amountPaid) || total;
 
-      if (amount < total) {
+      if (selectedMethod === 'CASH' && amount < total) {
         setError('Le montant payé est insuffisant');
         return;
       }
@@ -98,13 +111,21 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
         throw new Error(paymentResponse.error || 'Erreur lors du paiement');
       }
 
-      // 3. Succès - Vider le panier et fermer
+      // 3. Imprimer le reçu avec le montant payé et la monnaie
+      const change = selectedMethod === 'CASH' ? amount - total : 0;
+      printReceipt(order, amount, change);
+
+      // 4. Succès - Vider le panier et fermer
       clear();
       onSuccess();
       onClose();
 
       // Afficher un message de succès
-      alert(`Commande créée avec succès !\nNuméro: ${order.orderNumber}\nTotal: ${total.toLocaleString()} FCFA${amount > total ? `\nRendu: ${(amount - total).toLocaleString()} FCFA` : ''}`);
+      const successMessage = selectedMethod === 'CASH' && change > 0
+        ? `Commande créée avec succès !\n\nNuméro: ${order.orderNumber}\n\nMontant reçu: ${amount.toLocaleString()} FCFA\nTotal: ${total.toLocaleString()} FCFA\nMonnaie à rendre: ${change.toLocaleString()} FCFA`
+        : `Commande créée avec succès !\n\nNuméro: ${order.orderNumber}\nTotal: ${total.toLocaleString()} FCFA`;
+
+      alert(successMessage);
 
     } catch (err: any) {
       console.error('Erreur de paiement:', err);
@@ -114,7 +135,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
     }
   };
 
-  const change = parseFloat(amountPaid) - total;
+  const change = selectedMethod === 'CASH' && amountPaid ? parseFloat(amountPaid) - total : 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -167,25 +188,58 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
             </div>
           </div>
 
-          {/* Montant payé (pour espèces) */}
+          {/* Montant payé et calculette (pour espèces) */}
           {selectedMethod === 'CASH' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Montant payé (optionnel)
+                Montant reçu
               </label>
+
               <input
                 type="number"
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}
                 placeholder={total.toString()}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg font-semibold"
               />
+
+              {/* Calculette rapide */}
+              <div className="mt-3">
+                <div className="text-xs text-gray-500 mb-2">Montants rapides :</div>
+                <div className="grid grid-cols-5 gap-2">
+                  {quickAmounts.map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => handleQuickAmount(amount)}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      +{amount}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleClearAmount}
+                  className="w-full mt-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Effacer
+                </button>
+              </div>
+
+              {/* Affichage de la monnaie */}
               {change > 0 && (
-                <div className="mt-2 text-sm">
-                  <span className="text-gray-600">Rendu à rendre: </span>
-                  <span className="font-bold text-green-600">
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="text-sm text-green-700 mb-1">Monnaie à rendre :</div>
+                  <div className="text-2xl font-bold text-green-600">
                     {change.toLocaleString()} FCFA
-                  </span>
+                  </div>
+                </div>
+              )}
+
+              {change < 0 && amountPaid && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-sm text-red-700">
+                    ⚠️ Montant insuffisant : il manque {Math.abs(change).toLocaleString()} FCFA
+                  </div>
                 </div>
               )}
             </div>

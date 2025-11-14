@@ -1,7 +1,7 @@
 import type { Order } from '../types';
 
-export const printReceipt = (order: Order) => {
-  const receiptContent = generateReceiptHTML(order);
+export const printReceipt = (order: Order, amountPaid?: number, change?: number) => {
+  const receiptContent = generateReceiptHTML(order, amountPaid, change);
 
   // Ouvrir une nouvelle fenêtre pour l'impression
   const printWindow = window.open('', '', 'width=300,height=600');
@@ -19,7 +19,7 @@ export const printReceipt = (order: Order) => {
   }
 };
 
-const generateReceiptHTML = (order: Order): string => {
+const generateReceiptHTML = (order: Order, amountPaid?: number, change?: number): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -103,6 +103,26 @@ const generateReceiptHTML = (order: Order): string => {
           font-weight: bold;
         }
 
+        .payment-section {
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px dashed #000;
+        }
+
+        .change-section {
+          margin-top: 10px;
+          padding: 10px;
+          border: 2px solid #000;
+          background: #f5f5f5;
+          text-align: center;
+        }
+
+        .change-amount {
+          font-size: 20px;
+          font-weight: bold;
+          margin-top: 5px;
+        }
+
         .footer {
           text-align: center;
           margin-top: 20px;
@@ -170,22 +190,36 @@ const generateReceiptHTML = (order: Order): string => {
         </div>
       </div>
 
-      ${order.payments && order.payments.length > 0 ? `
-        <div class="totals">
-          <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 10px;">
-            <strong>Paiement(s):</strong>
-            ${order.payments.map(payment => `
-              <div class="total-line">
-                <span>${
-                  payment.method === 'CASH' ? '💵 Espèces' :
-                  payment.method === 'TMONEY' ? '📱 TMoney' :
-                  payment.method === 'FLOOZ' ? '📱 Flooz' :
-                  payment.method === 'CARD' ? '💳 Carte' : '📲 Mobile'
-                }</span>
-                <span>${Number(payment.amount).toLocaleString()} FCFA</span>
-              </div>
-            `).join('')}
+      ${amountPaid !== undefined ? `
+        <div class="payment-section">
+          <div class="total-line">
+            <span><strong>Montant reçu:</strong></span>
+            <span><strong>${amountPaid.toLocaleString()} FCFA</strong></span>
           </div>
+        </div>
+      ` : ''}
+
+      ${change !== undefined && change > 0 ? `
+        <div class="change-section">
+          <div><strong>MONNAIE À RENDRE</strong></div>
+          <div class="change-amount">${change.toLocaleString()} FCFA</div>
+        </div>
+      ` : ''}
+
+      ${order.payments && order.payments.length > 0 ? `
+        <div class="payment-section">
+          <div style="margin-bottom: 5px;"><strong>Paiement(s):</strong></div>
+          ${order.payments.map(payment => `
+            <div class="total-line">
+              <span>${
+                payment.method === 'CASH' ? '💵 Espèces' :
+                payment.method === 'TMONEY' ? '📱 TMoney' :
+                payment.method === 'FLOOZ' ? '📱 Flooz' :
+                payment.method === 'CARD' ? '💳 Carte' : '📲 Mobile'
+              }</span>
+              <span>${Number(payment.amount).toLocaleString()} FCFA</span>
+            </div>
+          `).join('')}
         </div>
       ` : ''}
 

@@ -14,6 +14,10 @@ export type PaymentMethod = 'CASH' | 'TMONEY' | 'FLOOZ' | 'CARD' | 'MOBILE' | 'O
 
 export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
 
+export type IngredientUnit = 'GRAM' | 'KILOGRAM' | 'LITER' | 'MILLILITER' | 'PIECE' | 'UNIT';
+
+export type StockMovementType = 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'WASTE' | 'RETURN';
+
 export interface User {
   id: string;
   email: string;
@@ -141,6 +145,42 @@ export interface CartItem {
   notes?: string;
   selectedOptions: CartItemOption[];
   total: number;
+}
+
+// Stock Management Types
+export interface Ingredient {
+  id: string;
+  name: string;
+  description?: string;
+  unit: IngredientUnit;
+  currentStock: number;
+  minStock: number;
+  unitCost: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  stockMovements?: StockMovement[];
+  recipes?: Recipe[];
+}
+
+export interface StockMovement {
+  id: string;
+  ingredientId: string;
+  type: StockMovementType;
+  quantity: number;
+  reason?: string;
+  reference?: string;
+  createdAt: string;
+  ingredient?: Ingredient;
+}
+
+export interface Recipe {
+  id: string;
+  productId: string;
+  ingredientId: string;
+  quantity: number;
+  product?: Product;
+  ingredient?: Ingredient;
 }
 
 // API Response types
