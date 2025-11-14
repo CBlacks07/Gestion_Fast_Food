@@ -316,8 +316,10 @@ export const usersApi = {
     return response.data;
   },
 
-  delete: async (id: string) => {
-    const response = await api.delete<ApiResponse<any>>(`/api/users/${id}`);
+  delete: async (id: string, currentUserId: string) => {
+    const response = await api.delete<ApiResponse<any>>(`/api/users/${id}`, {
+      data: { currentUserId },
+    });
     return response.data;
   },
 
@@ -332,6 +334,29 @@ export const usersApi = {
     const response = await api.get<ApiResponse<any>>('/api/users/stats/all', {
       params: date ? { date } : {},
     });
+    return response.data;
+  },
+};
+
+// Closures API
+export const closuresApi = {
+  getAll: async () => {
+    const response = await api.get<ApiResponse<any[]>>('/api/closures');
+    return response.data;
+  },
+
+  getByDate: async (date: string) => {
+    const response = await api.get<ApiResponse<any>>(`/api/closures/${date}`);
+    return response.data;
+  },
+
+  create: async (data: { date: string; userId: string; notes?: string }) => {
+    const response = await api.post<ApiResponse<any>>('/api/closures', data);
+    return response.data;
+  },
+
+  checkExists: async (date: string) => {
+    const response = await api.get<ApiResponse<{ exists: boolean; closure: any }>>(`/api/closures/check/${date}`);
     return response.data;
   },
 };

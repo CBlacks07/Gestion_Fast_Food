@@ -9,6 +9,7 @@ import TeamPage from './pages/TeamPage';
 import ProductsManagementPage from './pages/ProductsManagementPage';
 import CategoriesManagementPage from './pages/CategoriesManagementPage';
 import UsersManagementPage from './pages/UsersManagementPage';
+import ClosuresPage from './pages/ClosuresPage';
 import Layout from './components/Layout';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="/products-management" element={<ProductsManagementPage />} />
           <Route path="/categories-management" element={<CategoriesManagementPage />} />
           <Route path="/users-management" element={<UsersManagementPage />} />
+          <Route path="/closures" element={<ClosuresPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

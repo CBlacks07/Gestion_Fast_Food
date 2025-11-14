@@ -174,6 +174,36 @@ export default async function usersRoutes(app: FastifyInstance) {
   app.delete('/:id', async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const { currentUserId } = request.body as { currentUserId: string };
+
+      // Récupérer l'utilisateur à supprimer
+      const targetUser = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, role: true, username: true },
+      });
+
+      if (!targetUser) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Utilisateur non trouvé',
+        });
+      }
+
+      // Empêcher un utilisateur de se supprimer lui-même
+      if (id === currentUserId) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Vous ne pouvez pas vous supprimer vous-même',
+        });
+      }
+
+      // Empêcher la suppression d'un admin
+      if (targetUser.role === 'ADMIN') {
+        return reply.status(403).send({
+          success: false,
+          error: 'Impossible de supprimer un administrateur',
+        });
+      }
 
       const user = await prisma.user.update({
         where: { id },
@@ -186,6 +216,16 @@ export default async function usersRoutes(app: FastifyInstance) {
           lastName: true,
           role: true,
           isActive: true,
+        },
+      });
+
+      // Logger l'activité
+      await prisma.activityLog.create({
+        data: {
+          type: 'USER_DELETED',
+          userId: currentUserId,
+          targetId: id,
+          description: `Utilisateur désactivé: ${targetUser.username}`,
         },
       });
 

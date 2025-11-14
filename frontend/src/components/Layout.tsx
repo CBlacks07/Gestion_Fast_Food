@@ -26,6 +26,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/products-management', label: 'Produits', icon: '🍔' },
     { path: '/categories-management', label: 'Catégories', icon: '📂' },
     { path: '/users-management', label: 'Utilisateurs', icon: '👤' },
+    { path: '/closures', label: 'Clôtures', icon: '📊' },
   ];
 
   return (

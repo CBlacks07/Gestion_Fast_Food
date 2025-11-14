@@ -192,6 +192,17 @@ export default async function paymentsRoutes(app: FastifyInstance) {
         });
       }
 
+      // Log activity
+      await prisma.activityLog.create({
+        data: {
+          type: 'PAYMENT_CREATED',
+          userId,
+          targetId: payment.id,
+          description: `Paiement enregistré: ${amount.toFixed(2)} F CFA (${method})`,
+          metadata: JSON.stringify({ orderId, method, amount, orderNumber: order.orderNumber }),
+        },
+      }).catch((err) => request.log.error('Failed to log activity:', err));
+
       return reply.status(201).send({
         success: true,
         data: payment,

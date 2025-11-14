@@ -13,6 +13,7 @@ import optionsRoutes from './routes/options';
 import tablesRoutes from './routes/tables';
 import ingredientsRoutes from './routes/ingredients';
 import usersRoutes from './routes/users';
+import closuresRoutes from './routes/closures';
 
 dotenv.config();
 
@@ -52,7 +53,8 @@ app.get('/', async () => {
       options: '/api/options',
       tables: '/api/tables',
       ingredients: '/api/ingredients',
-      users: '/api/users'
+      users: '/api/users',
+      closures: '/api/closures'
     }
   };
 });
@@ -67,6 +69,7 @@ app.register(optionsRoutes, { prefix: '/api/options' });
 app.register(tablesRoutes, { prefix: '/api/tables' });
 app.register(ingredientsRoutes, { prefix: '/api/ingredients' });
 app.register(usersRoutes, { prefix: '/api/users' });
+app.register(closuresRoutes, { prefix: '/api/closures' });
 
 // Démarrage du serveur
 const start = async () => {

@@ -39,6 +39,16 @@ export default async function authRoutes(app: FastifyInstance) {
       // Retourner l'utilisateur sans le mot de passe
       const { password: _, ...userWithoutPassword } = user;
 
+      // Log activity
+      await prisma.activityLog.create({
+        data: {
+          type: 'USER_LOGIN',
+          userId: user.id,
+          description: `Connexion réussie: ${user.username}`,
+          ipAddress: request.ip,
+        },
+      }).catch((err) => request.log.error('Failed to log activity:', err));
+
       return reply.send({
         success: true,
         data: userWithoutPassword,

@@ -76,11 +76,12 @@ export default async function categoriesRoutes(app: FastifyInstance) {
   // POST /api/categories - Créer une nouvelle catégorie
   app.post('/', async (request, reply) => {
     try {
-      const { name, description, icon, displayOrder } = request.body as {
+      const { name, description, icon, displayOrder, userId } = request.body as {
         name: string;
         description?: string;
         icon?: string;
         displayOrder?: number;
+        userId?: string;
       };
 
       const category = await prisma.category.create({
@@ -91,6 +92,18 @@ export default async function categoriesRoutes(app: FastifyInstance) {
           displayOrder: displayOrder || 0,
         },
       });
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'CATEGORY_CREATED',
+            userId,
+            targetId: category.id,
+            description: `Catégorie créée: ${name}`,
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.status(201).send({
         success: true,
@@ -109,12 +122,13 @@ export default async function categoriesRoutes(app: FastifyInstance) {
   app.put('/:id', async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const { name, description, icon, displayOrder, isActive } = request.body as {
+      const { name, description, icon, displayOrder, isActive, userId } = request.body as {
         name?: string;
         description?: string;
         icon?: string;
         displayOrder?: number;
         isActive?: boolean;
+        userId?: string;
       };
 
       const category = await prisma.category.update({
@@ -127,6 +141,19 @@ export default async function categoriesRoutes(app: FastifyInstance) {
           isActive,
         },
       });
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'CATEGORY_UPDATED',
+            userId,
+            targetId: id,
+            description: `Catégorie modifiée: ${name || category.name}`,
+            metadata: JSON.stringify({ isActive }),
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.send({
         success: true,
@@ -145,11 +172,24 @@ export default async function categoriesRoutes(app: FastifyInstance) {
   app.delete('/:id', async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const { userId } = request.body as { userId?: string };
 
       const category = await prisma.category.update({
         where: { id },
         data: { isActive: false },
       });
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'CATEGORY_DELETED',
+            userId,
+            targetId: id,
+            description: `Catégorie désactivée: ${category.name}`,
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.send({
         success: true,

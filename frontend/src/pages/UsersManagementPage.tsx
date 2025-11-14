@@ -58,7 +58,7 @@ export default function UsersManagementPage() {
     if (!confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')) return;
 
     try {
-      const response = await usersApi.delete(id);
+      const response = await usersApi.delete(id, user!.id);
       if (response.success) {
         alert('Utilisateur désactivé avec succès');
         loadUsers();

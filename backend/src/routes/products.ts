@@ -107,6 +107,7 @@ export default async function productsRoutes(app: FastifyInstance) {
         categoryId,
         preparationTime,
         displayOrder,
+        userId,
       } = request.body as {
         name: string;
         description?: string;
@@ -117,6 +118,7 @@ export default async function productsRoutes(app: FastifyInstance) {
         categoryId: string;
         preparationTime?: number;
         displayOrder?: number;
+        userId?: string;
       };
 
       const product = await prisma.product.create({
@@ -135,6 +137,19 @@ export default async function productsRoutes(app: FastifyInstance) {
           category: true,
         },
       });
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'PRODUCT_CREATED',
+            userId,
+            targetId: product.id,
+            description: `Produit créé: ${name}`,
+            metadata: JSON.stringify({ price, categoryId }),
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.status(201).send({
         success: true,
@@ -165,6 +180,7 @@ export default async function productsRoutes(app: FastifyInstance) {
         preparationTime,
         displayOrder,
         categoryId,
+        userId,
       } = request.body as any;
 
       const product = await prisma.product.update({
@@ -192,6 +208,19 @@ export default async function productsRoutes(app: FastifyInstance) {
         },
       });
 
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'PRODUCT_UPDATED',
+            userId,
+            targetId: id,
+            description: `Produit modifié: ${name || product.name}`,
+            metadata: JSON.stringify({ price, isAvailable, isActive }),
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
+
       return reply.send({
         success: true,
         data: product,
@@ -209,11 +238,24 @@ export default async function productsRoutes(app: FastifyInstance) {
   app.delete('/:id', async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const { userId } = request.body as { userId?: string };
 
       const product = await prisma.product.update({
         where: { id },
         data: { isActive: false },
       });
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'PRODUCT_DELETED',
+            userId,
+            targetId: id,
+            description: `Produit désactivé: ${product.name}`,
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.send({
         success: true,

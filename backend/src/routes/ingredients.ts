@@ -149,11 +149,12 @@ export default async function ingredientsRoutes(app: FastifyInstance) {
   app.post('/:id/stock', async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const { type, quantity, reason, reference } = request.body as {
+      const { type, quantity, reason, reference, userId } = request.body as {
         type: string;
         quantity: number;
         reason?: string;
         reference?: string;
+        userId?: string;
       };
 
       // Récupérer l'ingrédient actuel
@@ -196,6 +197,19 @@ export default async function ingredientsRoutes(app: FastifyInstance) {
           },
         }),
       ]);
+
+      // Log activity
+      if (userId) {
+        await prisma.activityLog.create({
+          data: {
+            type: 'STOCK_ADJUSTED',
+            userId,
+            targetId: id,
+            description: `Stock ajusté: ${ingredient.name} (${quantity > 0 ? '+' : ''}${quantity} ${ingredient.unit})`,
+            metadata: JSON.stringify({ type, quantity, newStock, reason }),
+          },
+        }).catch((err) => request.log.error('Failed to log activity:', err));
+      }
 
       return reply.status(201).send({
         success: true,
