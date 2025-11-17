@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useAppSettingsStore } from '../store/appSettingsStore';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const login = useAuthStore((state) => state.login);
+  const settings = useAppSettingsStore((state) => state.settings);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +42,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🍔</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestion Fast-Food</h1>
+          <div className="text-6xl mb-4">{settings?.appIcon || '🍔'}</div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{settings?.appName || 'Gestion Fast-Food'}</h1>
+          {settings?.slogan && (
+            <p className="text-gray-600 mb-2">{settings.slogan}</p>
+          )}
           <p className="text-gray-500">Connectez-vous pour continuer</p>
         </div>
 
