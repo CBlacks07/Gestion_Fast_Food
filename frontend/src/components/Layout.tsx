@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAppSettingsStore } from '../store/appSettingsStore';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,6 +12,7 @@ interface LayoutProps {
 export default function Layout({ children, onLogout, username, userRole }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const settings = useAppSettingsStore((state) => state.settings);
 
   const isAdmin = userRole === 'ADMIN';
 
@@ -27,6 +29,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/products-management', label: 'Produits', icon: '🍔' },
     { path: '/categories-management', label: 'Catégories', icon: '📂' },
     { path: '/users-management', label: 'Utilisateurs', icon: '👤' },
+    { path: '/app-settings', label: 'Paramètres', icon: '⚙️' },
   ];
 
   return (
@@ -36,8 +39,8 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
         {/* Logo */}
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span>🍔</span>
-            <span>Fast-Food</span>
+            <span>{settings?.appIcon || '🍔'}</span>
+            <span>{settings?.appName || 'Fast-Food'}</span>
           </h1>
         </div>
 
