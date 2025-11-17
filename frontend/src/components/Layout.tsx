@@ -15,22 +15,24 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
   const settings = useAppSettingsStore((state) => state.settings);
 
   const isAdmin = userRole === 'ADMIN';
+  const isManager = userRole === 'MANAGER';
 
+  // Menu principal basé sur le rôle
   const menuItems = [
-    { path: '/pos', label: 'Point de Vente', icon: '🛒', adminOnly: false },
-    { path: '/orders', label: 'Commandes', icon: '📋', adminOnly: false },
-    { path: '/dashboard', label: 'Statistiques', icon: '📊', adminOnly: false },
-    { path: '/stock', label: 'Stocks', icon: '📦', adminOnly: false },
-    { path: '/closures', label: 'Clôtures', icon: '🔒', adminOnly: false },
-    { path: '/team', label: 'Équipe', icon: '👥', adminOnly: true },
-  ].filter((item) => !item.adminOnly || isAdmin);
+    { path: '/pos', label: 'Point de Vente', icon: '🛒', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { path: '/orders', label: 'Commandes', icon: '📋', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
+    { path: '/dashboard', label: 'Statistiques', icon: '📊', roles: ['MANAGER'] },
+    { path: '/stock', label: 'Stocks', icon: '📦', roles: ['MANAGER'] },
+    { path: '/closures', label: 'Clôtures', icon: '🔒', roles: ['MANAGER'] },
+    { path: '/team', label: 'Équipe', icon: '👥', roles: ['MANAGER'] },
+  ].filter((item) => item.roles.includes(userRole));
 
-  const adminMenuItems = [
-    { path: '/products-management', label: 'Produits', icon: '🍔' },
-    { path: '/categories-management', label: 'Catégories', icon: '📂' },
-    { path: '/users-management', label: 'Utilisateurs', icon: '👤' },
-    { path: '/app-settings', label: 'Paramètres', icon: '⚙️' },
-  ];
+  // Menu de gestion (Admin = paramètres système, Manager = gestion complète)
+  const managementMenuItems = [
+    { path: '/products-management', label: 'Produits', icon: '🍔', roles: ['MANAGER'] },
+    { path: '/categories-management', label: 'Catégories', icon: '📂', roles: ['MANAGER'] },
+    { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN', 'MANAGER'] },
+  ].filter((item) => item.roles.includes(userRole));
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -68,15 +70,15 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
             );
           })}
 
-          {/* Admin Menu Section */}
-          {isAdmin && adminMenuItems.length > 0 && (
+          {/* Management Menu Section */}
+          {managementMenuItems.length > 0 && (
             <>
               <div className="pt-4 pb-2">
                 <div className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Gestion
+                  {isAdmin ? 'Administration' : 'Gestion'}
                 </div>
               </div>
-              {adminMenuItems.map((item) => {
+              {managementMenuItems.map((item) => {
                 const isActive = location.pathname === item.path;
 
                 return (

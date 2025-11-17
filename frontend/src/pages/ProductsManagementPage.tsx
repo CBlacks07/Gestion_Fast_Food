@@ -14,7 +14,7 @@ export default function ProductsManagementPage() {
   const [filterCategory, setFilterCategory] = useState<string>('');
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isManager = user?.role === 'MANAGER';
 
   const productTypes: { value: ProductType; label: string }[] = [
     { value: 'FOOD', label: 'Nourriture' },
@@ -24,9 +24,9 @@ export default function ProductsManagementPage() {
   ];
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isManager) return;
     loadData();
-  }, [isAdmin]);
+  }, [isManager]);
 
   const loadData = async () => {
     try {
@@ -103,13 +103,13 @@ export default function ProductsManagementPage() {
     return matchSearch && matchCategory && isActiveProduct;
   });
 
-  if (!isAdmin) {
+  if (!isManager) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux administrateurs</p>
+          <p className="text-gray-500">Cette page est réservée aux gérants</p>
         </div>
       </div>
     );

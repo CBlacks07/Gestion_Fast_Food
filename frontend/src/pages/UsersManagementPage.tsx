@@ -24,7 +24,7 @@ export default function UsersManagementPage() {
   const [filterRole, setFilterRole] = useState<string>('');
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdminOrManager = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const roles: { value: Role; label: string; color: string }[] = [
     { value: 'ADMIN', label: 'Administrateur', color: 'bg-red-100 text-red-700' },
@@ -35,9 +35,9 @@ export default function UsersManagementPage() {
   ];
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdminOrManager) return;
     loadUsers();
-  }, [isAdmin]);
+  }, [isAdminOrManager]);
 
   const loadUsers = async () => {
     try {
@@ -88,13 +88,13 @@ export default function UsersManagementPage() {
     return matchSearch && matchRole;
   });
 
-  if (!isAdmin) {
+  if (!isAdminOrManager) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux administrateurs</p>
+          <p className="text-gray-500">Cette page est réservée aux administrateurs et gérants</p>
         </div>
       </div>
     );
