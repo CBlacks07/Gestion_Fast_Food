@@ -409,3 +409,43 @@ model ActivityLog {
   @@index([createdAt])
   @@map("activity_logs")
 }
+
+// ============================================
+// PARAMÈTRES DE L'APPLICATION
+// ============================================
+
+model AppSettings {
+  id              String   @id @default(cuid())
+
+  // Branding de l'application
+  appName         String   @default("Gestion Fast-Food")
+  appIcon         String   @default("🍔")
+  slogan          String?
+  logoUrl         String?  // URL ou chemin vers le logo personnalisé
+
+  // Couleurs et thème
+  primaryColor    String   @default("#ef4444") // Couleur principale (hex)
+  secondaryColor  String?  // Couleur secondaire (hex)
+
+  // Informations de l'entreprise
+  companyName     String?
+  companyEmail    String?
+  companyPhone    String?
+  companyAddress  String?
+
+  // Paramètres monétaires
+  currency        String   @default("FCFA")
+  currencySymbol  String   @default("FCFA")
+  taxRate         Decimal  @db.Decimal(5, 2) @default(0) // Taux de TVA en pourcentage
+
+  // Paramètres de facturation
+  receiptHeader   String?  @db.Text // En-tête personnalisé pour les reçus
+  receiptFooter   String?  @db.Text // Pied de page personnalisé pour les reçus
+
+  // État
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("app_settings")
+}

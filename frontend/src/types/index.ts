@@ -183,6 +183,29 @@ export interface Recipe {
   ingredient?: Ingredient;
 }
 
+// App Settings Types
+export interface AppSettings {
+  id: string;
+  appName: string;
+  appIcon: string;
+  slogan?: string;
+  logoUrl?: string;
+  primaryColor: string;
+  secondaryColor?: string;
+  companyName?: string;
+  companyEmail?: string;
+  companyPhone?: string;
+  companyAddress?: string;
+  currency: string;
+  currencySymbol: string;
+  taxRate: number;
+  receiptHeader?: string;
+  receiptFooter?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;
