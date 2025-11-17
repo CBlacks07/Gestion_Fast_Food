@@ -31,6 +31,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
   const managementMenuItems = [
     { path: '/products-management', label: 'Produits', icon: '🍔', roles: ['MANAGER'] },
     { path: '/categories-management', label: 'Catégories', icon: '📂', roles: ['MANAGER'] },
+    { path: '/tables-management', label: 'Tables', icon: '🪑', roles: ['ADMIN'] },
     { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN', 'MANAGER'] },
   ].filter((item) => item.roles.includes(userRole));
 

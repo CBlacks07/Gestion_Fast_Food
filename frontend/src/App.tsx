@@ -12,6 +12,7 @@ import TeamPage from './pages/TeamPage';
 import ProductsManagementPage from './pages/ProductsManagementPage';
 import CategoriesManagementPage from './pages/CategoriesManagementPage';
 import UsersManagementPage from './pages/UsersManagementPage';
+import TablesManagementPage from './pages/TablesManagementPage';
 import ClosuresPage from './pages/ClosuresPage';
 import AppSettingsPage from './pages/AppSettingsPage';
 import Layout from './components/Layout';
@@ -56,6 +57,7 @@ function App() {
           <Route path="/products-management" element={<ProductsManagementPage />} />
           <Route path="/categories-management" element={<CategoriesManagementPage />} />
           <Route path="/users-management" element={<UsersManagementPage />} />
+          <Route path="/tables-management" element={<TablesManagementPage />} />
           <Route path="/closures" element={<ClosuresPage />} />
           <Route path="/app-settings" element={<AppSettingsPage />} />
         </Routes>
