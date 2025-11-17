@@ -10,7 +10,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isManager = user?.role === 'MANAGER';
 
   const statusOptions = [
     { value: 'all', label: 'Toutes', icon: '📋' },
@@ -54,8 +54,8 @@ export default function OrdersPage() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!isAdmin) {
-      alert('Seul un administrateur peut supprimer une commande');
+    if (!isManager) {
+      alert('Seul un gérant peut supprimer une commande');
       return;
     }
 
@@ -368,7 +368,7 @@ export default function OrdersPage() {
               )}
 
               {/* Bouton de suppression (Admin uniquement) */}
-              {isAdmin && selectedOrder.status !== 'CANCELLED' && (
+              {isManager && selectedOrder.status !== 'CANCELLED' && (
                 <div className="pt-4 border-t">
                   <button
                     onClick={() => handleDeleteOrder(selectedOrder.id)}

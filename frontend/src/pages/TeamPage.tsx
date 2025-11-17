@@ -51,14 +51,14 @@ export default function TeamPage() {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isManager = user?.role === 'MANAGER';
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isManager) {
       return;
     }
     loadAllStats();
-  }, [selectedDate, isAdmin]);
+  }, [selectedDate, isManager]);
 
   const loadAllStats = async () => {
     try {
@@ -137,13 +137,13 @@ export default function TeamPage() {
     return labels[method] || method;
   };
 
-  if (!isAdmin) {
+  if (!isManager) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux administrateurs</p>
+          <p className="text-gray-500">Cette page est réservée aux gérants</p>
         </div>
       </div>
     );

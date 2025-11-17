@@ -35,7 +35,7 @@ export default function ClosuresPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const isManager = user?.role === 'MANAGER';
 
   useEffect(() => {
     if (user) {
@@ -50,7 +50,7 @@ export default function ClosuresPage() {
       setIsLoading(true);
       // Si admin: charger toutes les clôtures
       // Si utilisateur normal: charger seulement les siennes
-      const response = await closuresApi.getAll(isAdmin ? undefined : user.id);
+      const response = await closuresApi.getAll(isManager ? undefined : user.id);
       if (response.success && response.data) {
         setClosures(response.data);
       }
@@ -70,7 +70,7 @@ export default function ClosuresPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">🔒 Clôture de Journée</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {isAdmin
+              {isManager
                 ? 'Consultez toutes les clôtures journalières'
                 : 'Clôturez votre journée de travail'}
             </p>
@@ -104,7 +104,7 @@ export default function ClosuresPage() {
             <div className="text-6xl mb-4">📋</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune clôture</h3>
             <p className="text-gray-500 mb-4">
-              {isAdmin
+              {isManager
                 ? 'Aucune clôture n\'a encore été effectuée'
                 : 'Vous n\'avez pas encore effectué de clôture'}
             </p>
@@ -146,7 +146,7 @@ export default function ClosuresPage() {
                   </div>
 
                   {/* User (si admin) */}
-                  {isAdmin && (
+                  {isManager && (
                     <div className="mb-3 flex items-center gap-2 text-sm">
                       <span className="text-gray-500">Par:</span>
                       <span className="font-medium text-gray-900">

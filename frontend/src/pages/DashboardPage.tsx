@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ordersApi, paymentsApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 interface Stats {
   totalOrders: number;
@@ -14,9 +15,13 @@ export default function DashboardPage() {
   const [paymentStats, setPaymentStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const user = useAuthStore((state) => state.user);
+  const isManager = user?.role === 'MANAGER';
+
   useEffect(() => {
+    if (!isManager) return;
     loadStats();
-  }, []);
+  }, [isManager]);
 
   const loadStats = async () => {
     try {
@@ -64,6 +69,18 @@ export default function DashboardPage() {
     };
     return labels[method] || method;
   };
+
+  if (!isManager) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
+          <p className="text-gray-500">Cette page est réservée aux gérants</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

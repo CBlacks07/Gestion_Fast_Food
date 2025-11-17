@@ -13,7 +13,7 @@ export default function StockPage() {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const isManager = user?.role === 'MANAGER';
 
   const units: { value: IngredientUnit; label: string }[] = [
     { value: 'GRAM', label: 'Gramme (g)' },
@@ -80,7 +80,7 @@ export default function StockPage() {
               <span className="text-sm font-medium text-gray-700">Stock bas uniquement</span>
             </label>
 
-            {isAdmin && (
+            {isManager && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
@@ -180,7 +180,7 @@ export default function StockPage() {
                 </div>
 
                 {/* Actions */}
-                {isAdmin && (
+                {isManager && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleOpenStockModal(ingredient)}
