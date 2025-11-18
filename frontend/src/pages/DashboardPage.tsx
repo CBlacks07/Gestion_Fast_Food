@@ -180,7 +180,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Répartition des paiements</h2>
 
-          {paymentStats && Object.keys(paymentStats.byMethod).length > 0 ? (
+          {paymentStats && paymentStats.byMethod && Object.keys(paymentStats.byMethod).length > 0 ? (
             <div className="space-y-4">
               {Object.entries(paymentStats.byMethod).map(([method, data]) => {
                 const percentage = paymentStats.totalAmount > 0
