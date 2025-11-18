@@ -16,7 +16,8 @@ RUN npm install
 # Copier le code source
 COPY . .
 
-# Générer Prisma Client
+# Générer Prisma Client (ignorer les erreurs de checksum si serveur Prisma indisponible)
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN npx prisma generate
 
 # Builder le TypeScript
