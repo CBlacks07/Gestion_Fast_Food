@@ -1,10 +1,14 @@
 import { FastifyInstance } from 'fastify';
+import bcrypt from 'bcrypt';
 import prisma from '../utils/prisma';
 import { logActivity } from '../utils/activityLogger';
+import { requireAuth, requireRole } from '../middleware/auth';
+
+const SALT_ROUNDS = 10;
 
 export default async function usersRoutes(app: FastifyInstance) {
-  // GET /api/users - Liste tous les utilisateurs
-  app.get('/', async (request, reply) => {
+  // GET /api/users - Liste tous les utilisateurs (ADMIN uniquement)
+  app.get('/', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
     try {
       const { includeInactive } = request.query as { includeInactive?: string };
 
@@ -36,8 +40,8 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/users - Créer un nouvel utilisateur
-  app.post('/', async (request, reply) => {
+  // POST /api/users - Créer un nouvel utilisateur (ADMIN uniquement)
+  app.post('/', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
     try {
       const { email, username, password, firstName, lastName, role } = request.body as {
         email: string;
@@ -47,6 +51,15 @@ export default async function usersRoutes(app: FastifyInstance) {
         lastName?: string;
         role: string;
       };
+
+      // Validation des rôles autorisés
+      const validRoles = ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'];
+      if (!validRoles.includes(role)) {
+        return reply.status(400).send({
+          success: false,
+          error: `Rôle invalide. Rôles autorisés: ${validRoles.join(', ')}`,
+        });
+      }
 
       // Vérifier si l'email ou le username existe déjà
       const existingUser = await prisma.user.findFirst({
@@ -62,11 +75,14 @@ export default async function usersRoutes(app: FastifyInstance) {
         });
       }
 
+      // Hasher le mot de passe avec bcrypt
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
       const user = await prisma.user.create({
         data: {
           email,
           username,
-          password, // En production, il faudrait hasher le mot de passe
+          password: hashedPassword,
           firstName,
           lastName,
           role: role as any,
@@ -96,8 +112,8 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   });
 
-  // PUT /api/users/:id - Mettre à jour un utilisateur
-  app.put('/:id', async (request, reply) => {
+  // PUT /api/users/:id - Mettre à jour un utilisateur (ADMIN uniquement)
+  app.put('/:id', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const { email, username, password, firstName, lastName, role, isActive } = request.body as {
@@ -109,6 +125,17 @@ export default async function usersRoutes(app: FastifyInstance) {
         role?: string;
         isActive?: boolean;
       };
+
+      // Validation du rôle si fourni
+      if (role) {
+        const validRoles = ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'];
+        if (!validRoles.includes(role)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Rôle invalide. Rôles autorisés: ${validRoles.join(', ')}`,
+          });
+        }
+      }
 
       // Vérifier si l'email ou le username existe déjà (pour un autre utilisateur)
       if (email || username) {
@@ -137,7 +164,10 @@ export default async function usersRoutes(app: FastifyInstance) {
       const updateData: any = {};
       if (email !== undefined) updateData.email = email;
       if (username !== undefined) updateData.username = username;
-      if (password !== undefined) updateData.password = password; // En production, hasher
+      if (password !== undefined) {
+        // Hasher le nouveau mot de passe avec bcrypt
+        updateData.password = await bcrypt.hash(password, SALT_ROUNDS);
+      }
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
       if (role !== undefined) updateData.role = role;
@@ -171,11 +201,12 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   });
 
-  // DELETE /api/users/:id - Supprimer (désactiver) un utilisateur
-  app.delete('/:id', async (request, reply) => {
+  // DELETE /api/users/:id - Supprimer (désactiver) un utilisateur (ADMIN uniquement)
+  app.delete('/:id', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const { currentUserId } = request.body as { currentUserId: string };
+      // ✅ SÉCURITÉ: Utiliser le JWT au lieu du body pour éviter l'escalade de privilèges
+      const currentUserId = request.user!.userId;
 
       // Récupérer l'utilisateur à supprimer
       const targetUser = await prisma.user.findUnique({
@@ -241,8 +272,8 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   });
 
-  // GET /api/users/:id/stats - Statistiques d'un utilisateur
-  app.get('/:id/stats', async (request, reply) => {
+  // GET /api/users/:id/stats - Statistiques d'un utilisateur (MANAGER, ADMIN, ou soi-même)
+  app.get('/:id/stats', { preHandler: requireAuth }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const { date } = request.query as { date?: string };
@@ -270,6 +301,20 @@ export default async function usersRoutes(app: FastifyInstance) {
         return reply.status(404).send({
           success: false,
           error: 'Utilisateur non trouvé',
+        });
+      }
+
+      // ✅ SÉCURITÉ: Vérifier les permissions (soi-même, MANAGER ou ADMIN)
+      const currentUser = request.user!;
+      const canViewStats =
+        currentUser.userId === id ||
+        currentUser.role === 'ADMIN' ||
+        currentUser.role === 'MANAGER';
+
+      if (!canViewStats) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Vous n\'avez pas la permission de voir ces statistiques',
         });
       }
 
@@ -399,8 +444,8 @@ export default async function usersRoutes(app: FastifyInstance) {
     }
   });
 
-  // GET /api/users/stats/all - Statistiques de tous les utilisateurs pour une date donnée
-  app.get('/stats/all', async (request, reply) => {
+  // GET /api/users/stats/all - Statistiques de tous les utilisateurs pour une date donnée (ADMIN, MANAGER)
+  app.get('/stats/all', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
     try {
       const { date } = request.query as { date?: string };
 

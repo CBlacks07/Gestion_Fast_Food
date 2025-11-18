@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import dotenv from 'dotenv';
 
 // Import des routes
@@ -22,19 +24,50 @@ const app = Fastify({
   },
 });
 
-// Plugins
+// Configuration CORS sécurisée
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
 app.register(cors, {
-  origin: true, // En production, spécifier les origines autorisées
+  origin: process.env.NODE_ENV === 'production'
+    ? allowedOrigins
+    : true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 });
 
-app.register(helmet);
+// Headers de sécurité avec Helmet
+app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+});
+
+// Configuration JWT
+app.register(jwt, {
+  secret: process.env.JWT_SECRET || 'change-this-secret-in-production',
+  sign: {
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  },
+});
+
+// Rate limiting global
+app.register(rateLimit, {
+  global: true,
+  max: 100,
+  timeWindow: '1 minute',
+  errorResponseBuilder: () => ({
+    success: false,
+    error: 'Trop de requêtes. Veuillez réessayer dans quelques instants.',
+  }),
+});
 
 // Routes de base
 app.get('/health', async () => {
   return {
     status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
   };
 });
 
@@ -42,18 +75,6 @@ app.get('/', async () => {
   return {
     message: 'API Gestion Fast-Food',
     version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      categories: '/api/categories',
-      products: '/api/products',
-      orders: '/api/orders',
-      payments: '/api/payments',
-      ingredients: '/api/ingredients',
-      users: '/api/users',
-      closures: '/api/closures',
-      appSettings: '/api/app-settings'
-    }
   };
 });
 
