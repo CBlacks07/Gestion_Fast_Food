@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAppSettingsStore } from '../store/appSettingsStore';
-import type { AppSettings } from '../types';
+import type { AppSettings, ApiResponse } from '../types';
 import api from '../services/api';
 
 export default function AppSettingsPage() {
-  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<AppSettings>>({});
@@ -22,10 +21,9 @@ export default function AppSettingsPage() {
   const loadSettings = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get<AppSettings>('/api/app-settings');
+      const response = await api.get<ApiResponse<AppSettings>>('/api/app-settings');
       if (response.data.success && response.data.data) {
         const settingsData = response.data.data;
-        setSettings(settingsData);
         setFormData(settingsData);
       }
     } catch (error) {

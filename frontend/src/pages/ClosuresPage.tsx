@@ -356,12 +356,13 @@ function ClosureDetailModal({ closure, onClose }: { closure: Closure; onClose: (
   const closureDate = new Date(closure.date);
   const closedAtDate = new Date(closure.closedAt);
 
-  let detailedReport: any = {};
-  try {
-    detailedReport = JSON.parse(closure.detailedReport);
-  } catch (e) {
-    console.error('Error parsing detailed report:', e);
-  }
+  // Parse detailed report if needed in the future
+  // let detailedReport: any = {};
+  // try {
+  //   detailedReport = JSON.parse(closure.detailedReport);
+  // } catch (e) {
+  //   console.error('Error parsing detailed report:', e);
+  // }
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');

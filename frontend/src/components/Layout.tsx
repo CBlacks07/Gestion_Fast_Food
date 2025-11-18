@@ -15,7 +15,6 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
   const settings = useAppSettingsStore((state) => state.settings);
 
   const isAdmin = userRole === 'ADMIN';
-  const isManager = userRole === 'MANAGER';
 
   // Menu principal basé sur le rôle
   const menuItems = [
