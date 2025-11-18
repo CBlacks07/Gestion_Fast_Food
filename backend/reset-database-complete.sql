@@ -30,13 +30,13 @@ TRUNCATE TABLE "app_settings" CASCADE;
 SET session_replication_role = 'origin';
 
 -- 2. CRÉER L'UTILISATEUR ADMIN PAR DÉFAUT
--- Mot de passe: Admin123 (hash bcrypt)
+-- Mot de passe: Admin123 (en clair)
 INSERT INTO "users" ("id", "email", "username", "password", "firstName", "lastName", "role", "isActive", "createdAt", "updatedAt")
 VALUES (
   'admin-default-id',
   'admin@fastfood.com',
   'admin',
-  '$2b$10$YQw7hKOFA5xH8tZ9yx0fP.uO5kWXJZHvN9vGVxR8XB5YzJzN9kJp6', -- Admin123
+  'Admin123',
   'Administrateur',
   'Système',
   'ADMIN',
