@@ -47,7 +47,15 @@ function App() {
     <BrowserRouter>
       <Layout onLogout={logout} username={user.username} userRole={user.role}>
         <Routes>
-          <Route path="/" element={<Navigate to="/pos" replace />} />
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={user.role === 'ADMIN' ? '/app-settings' : '/pos'}
+                replace
+              />
+            }
+          />
           <Route path="/pos" element={<POSPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
