@@ -14,7 +14,11 @@ Write-Host "avec des emojis et descriptions"
 Write-Host ""
 
 # Charger les variables d'environnement depuis .env
-$envFile = ".env"
+$envFile = "backend\.env"
+if (-not (Test-Path $envFile)) {
+    $envFile = ".env"
+}
+
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
         if ($_ -match '^([^=]+)=(.*)$') {
@@ -23,10 +27,11 @@ if (Test-Path $envFile) {
             [Environment]::SetEnvironmentVariable($key, $value, "Process")
         }
     }
-    Write-Host "Variables d'environnement chargees depuis .env" -ForegroundColor Green
+    Write-Host "Variables d'environnement chargees depuis $envFile" -ForegroundColor Green
 } else {
     Write-Host "ATTENTION: Fichier .env introuvable" -ForegroundColor Red
-    Write-Host "Veuillez creer un fichier .env avec DATABASE_URL" -ForegroundColor Red
+    Write-Host "Veuillez creer un fichier backend\.env avec DATABASE_URL" -ForegroundColor Red
+    Write-Host "Vous pouvez copier backend\.env.example vers backend\.env" -ForegroundColor Yellow
     exit 1
 }
 

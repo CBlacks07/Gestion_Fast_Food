@@ -18,12 +18,20 @@ echo "avec des emojis et descriptions"
 echo ""
 
 # Charger les variables d'environnement depuis .env
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-    echo "✅ Variables d'environnement chargees depuis .env"
+ENV_FILE=""
+if [ -f backend/.env ]; then
+    ENV_FILE="backend/.env"
+elif [ -f .env ]; then
+    ENV_FILE=".env"
+fi
+
+if [ -n "$ENV_FILE" ]; then
+    export $(cat "$ENV_FILE" | grep -v '^#' | xargs)
+    echo "✅ Variables d'environnement chargees depuis $ENV_FILE"
 else
     echo "❌ ATTENTION: Fichier .env introuvable"
-    echo "Veuillez creer un fichier .env avec DATABASE_URL"
+    echo "Veuillez creer un fichier backend/.env avec DATABASE_URL"
+    echo "Vous pouvez copier backend/.env.example vers backend/.env"
     exit 1
 fi
 
