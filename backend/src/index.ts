@@ -9,8 +9,6 @@ import categoriesRoutes from './routes/categories';
 import productsRoutes from './routes/products';
 import ordersRoutes from './routes/orders';
 import paymentsRoutes from './routes/payments';
-import optionsRoutes from './routes/options';
-import tablesRoutes from './routes/tables';
 import ingredientsRoutes from './routes/ingredients';
 import usersRoutes from './routes/users';
 import closuresRoutes from './routes/closures';
@@ -51,8 +49,6 @@ app.get('/', async () => {
       products: '/api/products',
       orders: '/api/orders',
       payments: '/api/payments',
-      options: '/api/options',
-      tables: '/api/tables',
       ingredients: '/api/ingredients',
       users: '/api/users',
       closures: '/api/closures',
@@ -67,8 +63,6 @@ app.register(categoriesRoutes, { prefix: '/api/categories' });
 app.register(productsRoutes, { prefix: '/api/products' });
 app.register(ordersRoutes, { prefix: '/api/orders' });
 app.register(paymentsRoutes, { prefix: '/api/payments' });
-app.register(optionsRoutes, { prefix: '/api/options' });
-app.register(tablesRoutes, { prefix: '/api/tables' });
 app.register(ingredientsRoutes, { prefix: '/api/ingredients' });
 app.register(usersRoutes, { prefix: '/api/users' });
 app.register(closuresRoutes, { prefix: '/api/closures' });
