@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
 import { logActivity } from '../utils/activityLogger';
+import { requireRole } from '../middleware/auth';
 
 export default async function productsRoutes(app: FastifyInstance) {
   // GET /api/products - Liste tous les produits
@@ -95,8 +96,8 @@ export default async function productsRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /api/products - Créer un nouveau produit
-  app.post('/', async (request, reply) => {
+  // POST /api/products - Créer un nouveau produit (ADMIN, MANAGER)
+  app.post('/', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
     try {
       const {
         name,
@@ -163,8 +164,8 @@ export default async function productsRoutes(app: FastifyInstance) {
     }
   });
 
-  // PUT /api/products/:id - Mettre à jour un produit
-  app.put('/:id', async (request, reply) => {
+  // PUT /api/products/:id - Mettre à jour un produit (ADMIN, MANAGER)
+  app.put('/:id', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const {
@@ -231,8 +232,8 @@ export default async function productsRoutes(app: FastifyInstance) {
     }
   });
 
-  // DELETE /api/products/:id - Supprimer un produit (soft delete)
-  app.delete('/:id', async (request, reply) => {
+  // DELETE /api/products/:id - Supprimer un produit (soft delete) (ADMIN, MANAGER)
+  app.delete('/:id', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const { userId } = request.body as { userId?: string };
