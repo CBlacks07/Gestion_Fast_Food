@@ -32,7 +32,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/products-management', label: 'Produits', icon: '🍔', roles: ['MANAGER'] },
     { path: '/categories-management', label: 'Catégories', icon: '📂', roles: ['MANAGER'] },
     { path: '/app-settings', label: 'Paramètres App', icon: '🎨', roles: ['ADMIN'] },
-    { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN', 'MANAGER'] },
+    { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN'] },
   ].filter((item) => item.roles.includes(userRole));
 
   return (

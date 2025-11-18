@@ -137,8 +137,10 @@ export const ordersApi = {
     return response.data;
   },
 
-  cancel: async (id: string) => {
-    const response = await api.delete<ApiResponse<Order>>(`/api/orders/${id}`);
+  cancel: async (id: string, userId: string) => {
+    const response = await api.delete<ApiResponse<Order>>(`/api/orders/${id}`, {
+      data: { userId },
+    });
     return response.data;
   },
 

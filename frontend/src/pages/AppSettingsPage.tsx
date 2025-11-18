@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { useAppSettingsStore } from '../store/appSettingsStore';
 import type { AppSettings } from '../types';
 import api from '../services/api';
 
@@ -11,6 +12,7 @@ export default function AppSettingsPage() {
 
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === 'ADMIN';
+  const { setSettings: updateGlobalSettings } = useAppSettingsStore();
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -49,8 +51,10 @@ export default function AppSettingsPage() {
         userId: user?.id,
       });
 
-      if (response.data.success) {
-        alert('Paramètres sauvegardés avec succès ! Rechargez la page pour voir les changements.');
+      if (response.data.success && response.data.data) {
+        // Mettre à jour le store global pour appliquer immédiatement les changements
+        updateGlobalSettings(response.data.data);
+        alert('Paramètres sauvegardés avec succès ! Les modifications sont appliquées.');
         loadSettings();
       }
     } catch (error: any) {
@@ -72,7 +76,9 @@ export default function AppSettingsPage() {
         userId: user?.id,
       });
 
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
+        // Mettre à jour le store global pour appliquer immédiatement les changements
+        updateGlobalSettings(response.data.data);
         alert('Paramètres réinitialisés avec succès !');
         loadSettings();
       }
