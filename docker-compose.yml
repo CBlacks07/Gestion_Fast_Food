@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: fastfood_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fastfood_db
+      POSTGRES_USER: fastfood_admin
+      POSTGRES_PASSWORD: FastFood2025!Secure
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastfood_admin -d fastfood_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Node.js + Fastify)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastfood_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://fastfood_admin:FastFood2025!Secure@postgres:5432/fastfood_db?schema=public"
+      PORT: 3000
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      JWT_SECRET: "${JWT_SECRET:-fastfood-jwt-secret-change-me-in-production}"
+      JWT_EXPIRES_IN: "24h"
+      ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://127.0.0.1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backups:/app/backups
+
+  # Frontend (React + Vite) servi par Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fastfood_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: fastfood_network

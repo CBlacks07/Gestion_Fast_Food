@@ -1,0 +1,49 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Git
+.git
+.gitignore
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist
+build
+*.log
+
+# Documentation
+*.md
+!README.md
+
+# Scripts
+*.sh
+*.bat
+
+# Tests
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+
+# Autres
+.prettierrc
+.eslintrc
+.editorconfig
