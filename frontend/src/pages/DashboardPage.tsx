@@ -8,6 +8,7 @@ interface Stats {
   averageOrderValue: number;
   totalPayments: number;
   byMethod: Record<string, { count: number; total: number }>;
+  totalAmount?: number;
 }
 
 export default function DashboardPage() {
@@ -51,8 +52,33 @@ export default function DashboardPage() {
         const statsResponse = await usersApi.getUserStats(user.id, today);
 
         if (statsResponse.success && statsResponse.data) {
-          setOrderStats(statsResponse.data);
-          setPaymentStats(statsResponse.data);
+          // Adapter la structure des données
+          const userData = statsResponse.data;
+
+          setOrderStats({
+            totalOrders: userData.stats?.totalOrders || 0,
+            totalRevenue: userData.stats?.totalRevenue || 0,
+            averageOrderValue: userData.stats?.averageOrderValue || 0,
+          });
+
+          // Calculer le total des paiements
+          const paymentsByMethod = userData.paymentsByMethod || {};
+          const totalAmount = Object.values(paymentsByMethod).reduce(
+            (sum: number, method: any) => sum + method.total,
+            0
+          );
+
+          setPaymentStats({
+            totalOrders: userData.stats?.totalOrders || 0,
+            totalRevenue: userData.stats?.totalRevenue || 0,
+            averageOrderValue: userData.stats?.averageOrderValue || 0,
+            totalPayments: Object.values(paymentsByMethod).reduce(
+              (sum: number, method: any) => sum + method.count,
+              0
+            ),
+            byMethod: paymentsByMethod,
+            totalAmount,
+          });
         }
       }
     } catch (error) {
@@ -183,8 +209,8 @@ export default function DashboardPage() {
           {paymentStats && paymentStats.byMethod && Object.keys(paymentStats.byMethod).length > 0 ? (
             <div className="space-y-4">
               {Object.entries(paymentStats.byMethod).map(([method, data]) => {
-                const percentage = paymentStats.totalAmount > 0
-                  ? (data.total / paymentStats.totalAmount * 100).toFixed(1)
+                const percentage = (paymentStats.totalAmount || 0) > 0
+                  ? (data.total / (paymentStats.totalAmount || 1) * 100).toFixed(1)
                   : 0;
 
                 return (
