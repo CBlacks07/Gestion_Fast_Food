@@ -1,7 +1,10 @@
 # Backend Dockerfile pour production
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
+
+# Installer les dépendances système nécessaires pour Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Copier les fichiers de dépendances
 COPY package*.json ./
@@ -20,9 +23,12 @@ RUN npx prisma generate
 RUN npm run build
 
 # --- Stage de production ---
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
+
+# Installer OpenSSL pour Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Installer uniquement les dépendances de production
 COPY package*.json ./
