@@ -65,7 +65,11 @@ export default function OrdersPage() {
 
     try {
       // On utilise l'endpoint DELETE qui met le statut à CANCELLED
-      await ordersApi.cancel(orderId);
+      if (!user?.id) {
+        alert('Erreur: utilisateur non identifié');
+        return;
+      }
+      await ordersApi.cancel(orderId, user.id);
       loadOrders();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(null);

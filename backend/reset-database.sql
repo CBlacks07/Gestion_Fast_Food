@@ -27,8 +27,7 @@ SET session_replication_role = 'origin';
 
 -- Recréer l'utilisateur admin par défaut
 -- Username: admin
--- Password: admin123
--- Hash bcrypt généré pour 'admin123'
+-- Password: admin123 (en clair - backend compare sans hash)
 INSERT INTO "users" (
   "id",
   "email",
@@ -44,7 +43,7 @@ INSERT INTO "users" (
   'admin-default-id',
   'admin@fastfood.com',
   'admin',
-  '$2b$10$YourBcryptHashHere',  -- Ce hash sera remplacé par le script
+  'admin123',
   'Admin',
   'System',
   'ADMIN',

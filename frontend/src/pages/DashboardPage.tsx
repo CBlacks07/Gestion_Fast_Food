@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ordersApi, paymentsApi } from '../services/api';
+import { ordersApi, paymentsApi, usersApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 interface Stats {
@@ -8,6 +8,7 @@ interface Stats {
   averageOrderValue: number;
   totalPayments: number;
   byMethod: Record<string, { count: number; total: number }>;
+  totalAmount?: number;
 }
 
 export default function DashboardPage() {
@@ -17,27 +18,69 @@ export default function DashboardPage() {
 
   const user = useAuthStore((state) => state.user);
   const isManager = user?.role === 'MANAGER';
+  const isCashier = user?.role === 'CASHIER';
+  const canAccess = isManager || isCashier;
 
   useEffect(() => {
-    if (!isManager) return;
+    if (!canAccess || !user) return;
     loadStats();
-  }, [isManager]);
+  }, [canAccess, user]);
 
   const loadStats = async () => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
 
-      const [ordersResponse, paymentsResponse] = await Promise.all([
-        ordersApi.getTodayStats(),
-        paymentsApi.getTodayStats(),
-      ]);
+      if (isManager) {
+        // Gérant : stats globales
+        const [ordersResponse, paymentsResponse] = await Promise.all([
+          ordersApi.getTodayStats(),
+          paymentsApi.getTodayStats(),
+        ]);
 
-      if (ordersResponse.success && ordersResponse.data) {
-        setOrderStats(ordersResponse.data);
-      }
+        if (ordersResponse.success && ordersResponse.data) {
+          setOrderStats(ordersResponse.data);
+        }
 
-      if (paymentsResponse.success && paymentsResponse.data) {
-        setPaymentStats(paymentsResponse.data);
+        if (paymentsResponse.success && paymentsResponse.data) {
+          setPaymentStats(paymentsResponse.data);
+        }
+      } else if (isCashier) {
+        // Caissier : stats personnelles
+        const today = new Date().toISOString().split('T')[0];
+        const statsResponse = await usersApi.getUserStats(user.id, today);
+
+        if (statsResponse.success && statsResponse.data) {
+          // Adapter la structure des données
+          const userData = statsResponse.data;
+
+          setOrderStats({
+            totalOrders: userData.stats?.totalOrders || 0,
+            totalRevenue: userData.stats?.totalRevenue || 0,
+            averageOrderValue: userData.stats?.averageOrderValue || 0,
+            orders: userData.orders || [],
+          });
+
+          // Calculer le total des paiements
+          const paymentsByMethod = userData.paymentsByMethod || {};
+          const totalAmount = Object.values(paymentsByMethod).reduce(
+            (sum: number, method: any) => sum + method.total,
+            0
+          );
+
+          setPaymentStats({
+            totalOrders: userData.stats?.totalOrders || 0,
+            totalRevenue: userData.stats?.totalRevenue || 0,
+            averageOrderValue: userData.stats?.averageOrderValue || 0,
+            totalPayments: Object.values(paymentsByMethod).reduce(
+              (sum: number, method: any) => sum + method.count,
+              0
+            ),
+            byMethod: paymentsByMethod,
+            totalAmount,
+          });
+        }
       }
     } catch (error) {
       console.error('Erreur de chargement des statistiques:', error);
@@ -70,13 +113,13 @@ export default function DashboardPage() {
     return labels[method] || method;
   };
 
-  if (!isManager) {
+  if (!canAccess) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux gérants</p>
+          <p className="text-gray-500">Cette page est réservée aux gérants et caissiers</p>
         </div>
       </div>
     );
@@ -102,9 +145,11 @@ export default function DashboardPage() {
       <header className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">📊 Tableau de Bord</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              📊 {isManager ? 'Tableau de Bord' : 'Mes Statistiques'}
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Statistiques du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {isManager ? 'Statistiques globales' : 'Statistiques personnelles'} du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
 
@@ -162,11 +207,11 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Répartition des paiements</h2>
 
-          {paymentStats && Object.keys(paymentStats.byMethod).length > 0 ? (
+          {paymentStats && paymentStats.byMethod && Object.keys(paymentStats.byMethod).length > 0 ? (
             <div className="space-y-4">
               {Object.entries(paymentStats.byMethod).map(([method, data]) => {
-                const percentage = paymentStats.totalAmount > 0
-                  ? (data.total / paymentStats.totalAmount * 100).toFixed(1)
+                const percentage = (paymentStats.totalAmount || 0) > 0
+                  ? (data.total / (paymentStats.totalAmount || 1) * 100).toFixed(1)
                   : 0;
 
                 return (

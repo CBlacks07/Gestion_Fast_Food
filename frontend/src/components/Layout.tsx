@@ -21,9 +21,9 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
   const menuItems = [
     { path: '/pos', label: 'Point de Vente', icon: '🛒', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
     { path: '/orders', label: 'Commandes', icon: '📋', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
-    { path: '/dashboard', label: 'Statistiques', icon: '📊', roles: ['MANAGER'] },
+    { path: '/dashboard', label: 'Statistiques', icon: '📊', roles: ['MANAGER', 'CASHIER'] },
     { path: '/stock', label: 'Stocks', icon: '📦', roles: ['MANAGER'] },
-    { path: '/closures', label: 'Clôtures', icon: '🔒', roles: ['MANAGER'] },
+    { path: '/closures', label: 'Clôtures', icon: '🔒', roles: ['MANAGER', 'CASHIER'] },
     { path: '/team', label: 'Équipe', icon: '👥', roles: ['MANAGER'] },
   ].filter((item) => item.roles.includes(userRole));
 
@@ -32,7 +32,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
     { path: '/products-management', label: 'Produits', icon: '🍔', roles: ['MANAGER'] },
     { path: '/categories-management', label: 'Catégories', icon: '📂', roles: ['MANAGER'] },
     { path: '/app-settings', label: 'Paramètres App', icon: '🎨', roles: ['ADMIN'] },
-    { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN', 'MANAGER'] },
+    { path: '/users-management', label: 'Utilisateurs', icon: '👤', roles: ['ADMIN'] },
   ].filter((item) => item.roles.includes(userRole));
 
   return (
