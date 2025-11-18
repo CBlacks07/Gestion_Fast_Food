@@ -59,6 +59,7 @@ export default function DashboardPage() {
             totalOrders: userData.stats?.totalOrders || 0,
             totalRevenue: userData.stats?.totalRevenue || 0,
             averageOrderValue: userData.stats?.averageOrderValue || 0,
+            orders: userData.orders || [],
           });
 
           // Calculer le total des paiements
