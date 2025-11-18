@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ordersApi, paymentsApi } from '../services/api';
+import { ordersApi, paymentsApi, usersApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 interface Stats {
@@ -17,27 +17,43 @@ export default function DashboardPage() {
 
   const user = useAuthStore((state) => state.user);
   const isManager = user?.role === 'MANAGER';
+  const isCashier = user?.role === 'CASHIER';
+  const canAccess = isManager || isCashier;
 
   useEffect(() => {
-    if (!isManager) return;
+    if (!canAccess || !user) return;
     loadStats();
-  }, [isManager]);
+  }, [canAccess, user]);
 
   const loadStats = async () => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
 
-      const [ordersResponse, paymentsResponse] = await Promise.all([
-        ordersApi.getTodayStats(),
-        paymentsApi.getTodayStats(),
-      ]);
+      if (isManager) {
+        // Gérant : stats globales
+        const [ordersResponse, paymentsResponse] = await Promise.all([
+          ordersApi.getTodayStats(),
+          paymentsApi.getTodayStats(),
+        ]);
 
-      if (ordersResponse.success && ordersResponse.data) {
-        setOrderStats(ordersResponse.data);
-      }
+        if (ordersResponse.success && ordersResponse.data) {
+          setOrderStats(ordersResponse.data);
+        }
 
-      if (paymentsResponse.success && paymentsResponse.data) {
-        setPaymentStats(paymentsResponse.data);
+        if (paymentsResponse.success && paymentsResponse.data) {
+          setPaymentStats(paymentsResponse.data);
+        }
+      } else if (isCashier) {
+        // Caissier : stats personnelles
+        const today = new Date().toISOString().split('T')[0];
+        const statsResponse = await usersApi.getUserStats(user.id, today);
+
+        if (statsResponse.success && statsResponse.data) {
+          setOrderStats(statsResponse.data);
+          setPaymentStats(statsResponse.data);
+        }
       }
     } catch (error) {
       console.error('Erreur de chargement des statistiques:', error);
@@ -70,13 +86,13 @@ export default function DashboardPage() {
     return labels[method] || method;
   };
 
-  if (!isManager) {
+  if (!canAccess) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Accès restreint</h2>
-          <p className="text-gray-500">Cette page est réservée aux gérants</p>
+          <p className="text-gray-500">Cette page est réservée aux gérants et caissiers</p>
         </div>
       </div>
     );
@@ -102,9 +118,11 @@ export default function DashboardPage() {
       <header className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">📊 Tableau de Bord</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              📊 {isManager ? 'Tableau de Bord' : 'Mes Statistiques'}
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Statistiques du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {isManager ? 'Statistiques globales' : 'Statistiques personnelles'} du {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
 

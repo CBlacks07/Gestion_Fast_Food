@@ -21,7 +21,7 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
   const menuItems = [
     { path: '/pos', label: 'Point de Vente', icon: '🛒', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
     { path: '/orders', label: 'Commandes', icon: '📋', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
-    { path: '/dashboard', label: 'Statistiques', icon: '📊', roles: ['MANAGER'] },
+    { path: '/dashboard', label: 'Statistiques', icon: '📊', roles: ['MANAGER', 'CASHIER'] },
     { path: '/stock', label: 'Stocks', icon: '📦', roles: ['MANAGER'] },
     { path: '/closures', label: 'Clôtures', icon: '🔒', roles: ['MANAGER', 'CASHIER'] },
     { path: '/team', label: 'Équipe', icon: '👥', roles: ['MANAGER'] },
