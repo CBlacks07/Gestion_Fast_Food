@@ -20,6 +20,28 @@ const api = axios.create({
   },
 });
 
+// Intercepteur pour ajouter le token JWT à toutes les requêtes
+api.interceptors.request.use(
+  (config) => {
+    // Récupérer le token depuis le localStorage (où zustand persiste les données)
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      try {
+        const { state } = JSON.parse(authStorage);
+        if (state?.token) {
+          config.headers.Authorization = `Bearer ${state.token}`;
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du token:', error);
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authApi = {
   login: async (username: string, password: string) => {

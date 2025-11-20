@@ -26,13 +26,25 @@ export default function LoginPage() {
       const response = await authApi.login(username, password);
 
       if (response.success && response.data) {
-        login(response.data);
+        // Le backend retourne { user: {...}, token: "..." }
+        // On passe l'objet user ET le token au store
+        login(response.data.user, response.data.token);
       } else {
         setError(response.error || 'Erreur de connexion');
       }
     } catch (err: any) {
       console.error('Erreur de connexion:', err);
-      setError(err.response?.data?.error || 'Erreur de connexion au serveur');
+
+      // Vérifier si c'est une erreur de service indisponible (503)
+      if (err.response?.status === 503) {
+        setError('Le serveur démarre... Veuillez réessayer dans quelques secondes.');
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        setError('Impossible de contacter le serveur. Vérifiez que le backend est démarré.');
+      } else {
+        setError('Erreur de connexion au serveur');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -106,8 +118,8 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>Comptes de démonstration :</p>
-          <p className="mt-2">admin / admin123 (Admin)</p>
-          <p>cashier / cashier123 (Caissier)</p>
+          <p className="mt-2">admin / Admin123 (Admin)</p>
+          <p>cashier / Cashier123 (Caissier)</p>
         </div>
       </div>
     </div>

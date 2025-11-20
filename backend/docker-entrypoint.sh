@@ -1,32 +1,32 @@
 #!/bin/sh
 set -e
 
-echo "🚀 FastFood API - Démarrage..."
+echo "FastFood API - Starting..."
 
-# Attendre que PostgreSQL soit prêt
-echo "⏳ Attente de la base de données..."
+# Wait for PostgreSQL to be ready
+echo "Waiting for database..."
 until npx prisma db push --skip-generate 2>/dev/null; do
-  echo "⏳ Base de données non prête, nouvelle tentative dans 2s..."
+  echo "Database not ready, retrying in 2s..."
   sleep 2
 done
 
-echo "✅ Base de données connectée !"
+echo "Database connected!"
 
-# Appliquer les migrations
-echo "📦 Application des migrations..."
+# Apply migrations
+echo "Applying migrations..."
 npx prisma migrate deploy || npx prisma db push --skip-generate
 
-# Créer l'admin par défaut (le script vérifie si un admin existe déjà)
-echo "👤 Vérification du compte administrateur..."
-npx tsx src/scripts/create-admin.ts || echo "⚠️  Impossible de créer l'admin (il existe peut-être déjà)"
+# Create default admin (script checks if admin already exists)
+echo "Checking admin account..."
+npx tsx src/scripts/create-admin.ts || echo "Warning: Could not create admin (may already exist)"
 
-echo "✅ Initialisation terminée !"
-echo "🌐 API disponible sur le port 3000"
+echo "Initialization complete!"
+echo "API available on port 3000"
 echo ""
-echo "📝 Identifiants par défaut:"
+echo "Default credentials:"
 echo "   Username: admin"
 echo "   Password: Admin123"
 echo ""
 
-# Démarrer l'application
+# Start the application
 exec "$@"

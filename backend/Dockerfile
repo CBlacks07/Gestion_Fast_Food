@@ -56,6 +56,7 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/add-categories-fastfood.sql ./add-categories-fastfood.sql
 
 # Créer les dossiers nécessaires
 RUN mkdir -p /app/uploads /app/backups
@@ -63,9 +64,37 @@ RUN mkdir -p /app/uploads /app/backups
 # Exposer le port
 EXPOSE 3000
 
-# Script de démarrage
-COPY docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
+# Créer le script de démarrage directement dans l'image
+RUN echo '#!/bin/sh' > /app/docker-entrypoint.sh && \
+    echo 'set -e' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "FastFood API - Starting..."' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Waiting for database..."' >> /app/docker-entrypoint.sh && \
+    echo 'until npx prisma db push --skip-generate 2>/dev/null; do' >> /app/docker-entrypoint.sh && \
+    echo '  echo "Database not ready, retrying in 2s..."' >> /app/docker-entrypoint.sh && \
+    echo '  sleep 2' >> /app/docker-entrypoint.sh && \
+    echo 'done' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Database connected!"' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Applying migrations..."' >> /app/docker-entrypoint.sh && \
+    echo 'npx prisma migrate deploy || npx prisma db push --skip-generate' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Checking admin account..."' >> /app/docker-entrypoint.sh && \
+    echo 'npx tsx src/scripts/create-admin.ts || echo "Warning: Could not create admin"' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Seeding fast-food categories (43 categories)..."' >> /app/docker-entrypoint.sh && \
+    echo 'npx tsx src/scripts/seed-categories-fastfood.ts || echo "Warning: Could not seed categories"' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Initialization complete!"' >> /app/docker-entrypoint.sh && \
+    echo 'echo "API available on port 3000"' >> /app/docker-entrypoint.sh && \
+    echo 'echo ""' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Default credentials: admin / Admin123"' >> /app/docker-entrypoint.sh && \
+    echo 'echo ""' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
+    echo 'exec "$@"' >> /app/docker-entrypoint.sh && \
+    chmod +x /app/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

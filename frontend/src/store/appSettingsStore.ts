@@ -30,12 +30,15 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
       isLoaded: false,
 
       setSettings: (settings) => {
-        set({ settings, isLoaded: true });
+        // Toujours fusionner avec les valeurs par défaut pour éviter les propriétés manquantes
+        set({ settings: { ...defaultSettings, ...settings }, isLoaded: true });
       },
 
       updateSettings: (newSettings) => {
         set((state) => ({
-          settings: state.settings ? { ...state.settings, ...newSettings } : null,
+          settings: state.settings
+            ? { ...defaultSettings, ...state.settings, ...newSettings }
+            : { ...defaultSettings, ...newSettings },
         }));
       },
 
@@ -45,6 +48,12 @@ export const useAppSettingsStore = create<AppSettingsStore>()(
     }),
     {
       name: 'app-settings-storage',
+      // S'assurer qu'après hydratation on a toujours des valeurs par défaut
+      onRehydrateStorage: () => (state) => {
+        if (state && state.settings) {
+          state.settings = { ...defaultSettings, ...state.settings };
+        }
+      },
     }
   )
 );

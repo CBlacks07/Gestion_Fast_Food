@@ -29,8 +29,14 @@ function App() {
         if (response.data.success && response.data.data) {
           setSettings(response.data.data);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erreur lors du chargement des paramètres:', error);
+
+        // Si le serveur est en cours de démarrage, réessayer après 3 secondes
+        if (error.response?.status === 503 || error.code === 'ERR_NETWORK') {
+          console.log('Le serveur démarre, nouvelle tentative dans 3 secondes...');
+          setTimeout(loadSettings, 3000);
+        }
       }
     };
 
