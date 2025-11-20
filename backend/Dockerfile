@@ -16,9 +16,24 @@ RUN npm install
 # Copier le code source
 COPY . .
 
-# Générer Prisma Client avec retry automatique
+# Générer Prisma Client avec retry automatique (délais: 2s, 4s, 8s, 16s, 32s)
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-RUN chmod +x prisma-generate.sh && ./prisma-generate.sh
+RUN for i in 1 2 3 4 5; do \
+      echo "🔄 Tentative $i/5 de génération du client Prisma..."; \
+      if npx prisma generate; then \
+        echo "✅ Client Prisma généré avec succès!"; \
+        exit 0; \
+      else \
+        if [ $i -lt 5 ]; then \
+          delay=$((2 ** $i)); \
+          echo "❌ Échec. Nouvelle tentative dans ${delay}s..."; \
+          sleep $delay; \
+        else \
+          echo "❌ Échec après 5 tentatives. Le serveur Prisma semble indisponible."; \
+          exit 1; \
+        fi; \
+      fi; \
+    done
 
 # Builder le TypeScript
 RUN npm run build
