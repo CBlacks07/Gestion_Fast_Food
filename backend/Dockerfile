@@ -64,7 +64,7 @@ RUN mkdir -p /app/uploads /app/backups
 EXPOSE 3000
 
 # Script de démarrage
-COPY docker-entrypoint.sh /app/
+COPY --from=builder /app/docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
