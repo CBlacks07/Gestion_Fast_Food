@@ -97,7 +97,7 @@ function App() {
             path="/"
             element={
               <Navigate
-                to={user.role === 'ADMIN' ? '/app-settings' : '/pos'}
+                to={user.role === 'ADMIN' ? '/users-management' : '/pos'}
                 replace
               />
             }
