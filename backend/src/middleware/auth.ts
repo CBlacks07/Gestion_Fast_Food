@@ -58,6 +58,6 @@ export async function optionalAuth(
     request.user = payload;
   } catch (err) {
     // Ne pas bloquer la requête, juste ne pas charger l'utilisateur
-    request.user = undefined;
+    // On ne fait rien, request.user reste undefined par défaut
   }
 }
