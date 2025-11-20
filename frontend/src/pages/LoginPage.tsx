@@ -32,7 +32,17 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('Erreur de connexion:', err);
-      setError(err.response?.data?.error || 'Erreur de connexion au serveur');
+
+      // Vérifier si c'est une erreur de service indisponible (503)
+      if (err.response?.status === 503) {
+        setError('Le serveur démarre... Veuillez réessayer dans quelques secondes.');
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        setError('Impossible de contacter le serveur. Vérifiez que le backend est démarré.');
+      } else {
+        setError('Erreur de connexion au serveur');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -15,6 +15,7 @@ import ingredientsRoutes from './routes/ingredients';
 import usersRoutes from './routes/users';
 import closuresRoutes from './routes/closures';
 import appSettingsRoutes from './routes/app-settings';
+import { dbHealthCheckMiddleware, checkDbConnection } from './middleware/dbHealthCheck';
 
 dotenv.config();
 
@@ -65,8 +66,10 @@ app.register(rateLimit, {
 
 // Routes de base
 app.get('/health', async () => {
+  const dbConnected = await checkDbConnection();
   return {
-    status: 'ok',
+    status: dbConnected ? 'ok' : 'degraded',
+    database: dbConnected ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   };
 });
@@ -76,6 +79,13 @@ app.get('/', async () => {
     message: 'API Gestion Fast-Food',
     version: '1.0.0',
   };
+});
+
+// Hook global pour vérifier la santé de la DB avant les routes API
+app.addHook('onRequest', async (request, reply) => {
+  if (request.url.startsWith('/api/')) {
+    await dbHealthCheckMiddleware(request, reply);
+  }
 });
 
 // Enregistrement des routes API
