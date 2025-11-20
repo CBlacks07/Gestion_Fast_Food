@@ -46,12 +46,13 @@ WORKDIR /app
 # Installer OpenSSL pour Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Installer uniquement les dépendances de production
+# Installer uniquement les dépendances de production + tsx pour les scripts
 COPY package*.json ./
-RUN npm install --production
+RUN npm install --production && npm install tsx bcrypt
 
 # Copier les fichiers buildés et Prisma
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
