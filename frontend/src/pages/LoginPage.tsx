@@ -26,7 +26,9 @@ export default function LoginPage() {
       const response = await authApi.login(username, password);
 
       if (response.success && response.data) {
-        login(response.data);
+        // Le backend retourne { user: {...}, token: "..." }
+        // On passe seulement l'objet user au store
+        login(response.data.user);
       } else {
         setError(response.error || 'Erreur de connexion');
       }
@@ -116,8 +118,8 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>Comptes de démonstration :</p>
-          <p className="mt-2">admin / admin123 (Admin)</p>
-          <p>cashier / cashier123 (Caissier)</p>
+          <p className="mt-2">admin / Admin123 (Admin)</p>
+          <p>cashier / Cashier123 (Caissier)</p>
         </div>
       </div>
     </div>
