@@ -93,7 +93,7 @@ export default function TableSelector({ onClose }: TableSelectorProps) {
               {/* Grille des tables */}
               <div className="grid grid-cols-3 gap-3">
                 {tables.map((table) => {
-                  const isOccupied = table.orders && table.orders.length > 0;
+                  const isOccupied = false; // TODO: Implement table occupation check
                   const isSelected = tableId === table.id;
 
                   return (

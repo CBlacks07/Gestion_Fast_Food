@@ -1,18 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-
-// Interface pour le payload JWT
-export interface JWTPayload {
-  userId: string;
-  role: string;
-  email: string;
-}
-
-// Augmenter le type FastifyRequest pour inclure user
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: JWTPayload;
-  }
-}
+import { JWTPayload } from '../types/fastify';
 
 /**
  * Middleware d'authentification
@@ -71,6 +58,6 @@ export async function optionalAuth(
     request.user = payload;
   } catch (err) {
     // Ne pas bloquer la requête, juste ne pas charger l'utilisateur
-    request.user = undefined;
+    // On ne fait rien, request.user reste undefined par défaut
   }
 }

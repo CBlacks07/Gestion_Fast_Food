@@ -166,7 +166,7 @@ export default async function appSettingsRoutes(app: FastifyInstance) {
           userId,
           targetId: settings.id,
           description: `Paramètres de l'application modifiés`,
-          metadata: JSON.stringify({ appName: settings.appName }),
+          metadata: { appName: settings.appName },
         });
       }
 

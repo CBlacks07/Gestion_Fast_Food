@@ -15,7 +15,7 @@ import UsersManagementPage from './pages/UsersManagementPage';
 import ClosuresPage from './pages/ClosuresPage';
 import AppSettingsPage from './pages/AppSettingsPage';
 import Layout from './components/Layout';
-import type { AppSettings } from './types';
+import type { AppSettings, ApiResponse } from './types';
 
 function App() {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -25,7 +25,7 @@ function App() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await api.get<AppSettings>('/api/app-settings');
+        const response = await api.get<ApiResponse<AppSettings>>('/api/app-settings');
         if (response.data.success && response.data.data) {
           setSettings(response.data.data);
         }

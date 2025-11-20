@@ -42,7 +42,7 @@ export default async function authRoutes(app: FastifyInstance) {
         if (!user) {
           // Log tentative de connexion échouée
           await logActivity({
-            type: 'LOGIN_FAILED',
+            type: 'SYSTEM_ERROR',
             description: `Tentative de connexion échouée: ${username}`,
             ipAddress: request.ip,
             metadata: { username },
@@ -60,7 +60,7 @@ export default async function authRoutes(app: FastifyInstance) {
         if (!isPasswordValid) {
           // Log tentative de connexion échouée
           await logActivity({
-            type: 'LOGIN_FAILED',
+            type: 'SYSTEM_ERROR',
             userId: user.id,
             description: `Tentative de connexion échouée: ${user.username} (mauvais mot de passe)`,
             ipAddress: request.ip,

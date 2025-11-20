@@ -281,7 +281,6 @@ export default function TeamPage() {
       {/* Modal de détails utilisateur */}
       {selectedUser && (
         <UserDetailsModal
-          userId={selectedUser}
           stats={userDetailedStats}
           isLoading={isLoadingDetails}
           onClose={() => {
@@ -300,7 +299,6 @@ export default function TeamPage() {
 
 // Modal de détails utilisateur
 function UserDetailsModal({
-  userId,
   stats,
   isLoading,
   onClose,
@@ -309,7 +307,6 @@ function UserDetailsModal({
   getPaymentMethodIcon,
   getPaymentMethodLabel,
 }: {
-  userId: string;
   stats: UserDetailedStats | null;
   isLoading: boolean;
   onClose: () => void;
