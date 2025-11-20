@@ -27,8 +27,8 @@ export default function LoginPage() {
 
       if (response.success && response.data) {
         // Le backend retourne { user: {...}, token: "..." }
-        // On passe seulement l'objet user au store
-        login(response.data.user);
+        // On passe l'objet user ET le token au store
+        login(response.data.user, response.data.token);
       } else {
         setError(response.error || 'Erreur de connexion');
       }
