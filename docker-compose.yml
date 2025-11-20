@@ -59,6 +59,25 @@ services:
     environment:
       VITE_API_URL: http://localhost:3000
 
+  # Service de sauvegarde automatique (toutes les 12h)
+  backup:
+    build:
+      context: ./docker/backup
+      dockerfile: Dockerfile
+    container_name: fastfood_backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: fastfood_db
+      POSTGRES_USER: fastfood_admin
+      POSTGRES_PASSWORD: FastFood2025!Secure
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     driver: local
