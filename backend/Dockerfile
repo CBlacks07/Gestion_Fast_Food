@@ -83,6 +83,9 @@ RUN echo '#!/bin/sh' > /app/docker-entrypoint.sh && \
     echo 'echo "Checking admin account..."' >> /app/docker-entrypoint.sh && \
     echo 'npx tsx src/scripts/create-admin.ts || echo "Warning: Could not create admin"' >> /app/docker-entrypoint.sh && \
     echo '' >> /app/docker-entrypoint.sh && \
+    echo 'echo "Seeding demo data (categories, products)..."' >> /app/docker-entrypoint.sh && \
+    echo 'npx tsx src/scripts/seed-demo-data.ts || echo "Warning: Could not seed demo data"' >> /app/docker-entrypoint.sh && \
+    echo '' >> /app/docker-entrypoint.sh && \
     echo 'echo "Initialization complete!"' >> /app/docker-entrypoint.sh && \
     echo 'echo "API available on port 3000"' >> /app/docker-entrypoint.sh && \
     echo 'echo ""' >> /app/docker-entrypoint.sh && \
