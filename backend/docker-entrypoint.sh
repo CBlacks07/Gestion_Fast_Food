@@ -14,22 +14,19 @@ echo "✅ Base de données connectée !"
 
 # Appliquer les migrations
 echo "📦 Application des migrations..."
-npx prisma migrate deploy || echo "⚠️  Aucune migration à appliquer"
+npx prisma migrate deploy || npx prisma db push --skip-generate
 
-# Vérifier si des utilisateurs existent
-USER_COUNT=$(npx prisma db execute --stdin <<EOF
-SELECT COUNT(*) FROM users;
-EOF
-)
-
-# Si aucun utilisateur, créer l'admin par défaut
-if [ "$USER_COUNT" -eq "0" ]; then
-  echo "👤 Création du compte administrateur par défaut..."
-  npx tsx src/scripts/create-admin.ts
-fi
+# Créer l'admin par défaut (le script vérifie si un admin existe déjà)
+echo "👤 Vérification du compte administrateur..."
+npx tsx src/scripts/create-admin.ts || echo "⚠️  Impossible de créer l'admin (il existe peut-être déjà)"
 
 echo "✅ Initialisation terminée !"
 echo "🌐 API disponible sur le port 3000"
+echo ""
+echo "📝 Identifiants par défaut:"
+echo "   Username: admin"
+echo "   Password: Admin123"
+echo ""
 
 # Démarrer l'application
 exec "$@"
