@@ -48,15 +48,6 @@ catch {
     exit 1
 }
 
-# Vérifier que .env existe
-if (-not (Test-Path ".env")) {
-    Write-Error "Le fichier .env n'existe pas"
-    Write-Info "Exécutez d'abord: .\setup.ps1"
-    exit 1
-}
-
-Write-Success "Fichier .env trouvé"
-
 # Options de build
 Write-Host ""
 Write-Title "Configuration du build"

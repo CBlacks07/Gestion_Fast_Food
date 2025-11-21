@@ -48,15 +48,6 @@ else
     exit 1
 fi
 
-# Vérifier que .env existe
-if [ ! -f ".env" ]; then
-    print_error "Le fichier .env n'existe pas"
-    print_info "Exécutez d'abord: ./setup.sh"
-    exit 1
-fi
-
-print_success "Fichier .env trouvé"
-
 # Options de build
 echo ""
 print_title "Configuration du build"
