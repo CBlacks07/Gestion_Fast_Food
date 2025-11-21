@@ -42,7 +42,6 @@ Write-Title "Vérification des prérequis"
 $prerequisites = @{
     "Docker" = { docker --version }
     "Docker Compose" = { docker-compose --version }
-    "Git" = { git --version }
 }
 
 $allPrerequisitesMet = $true
@@ -62,7 +61,6 @@ if (-not $allPrerequisitesMet) {
     Write-Host ""
     Write-Warning "Certains prérequis sont manquants. Veuillez les installer:"
     Write-Info "  • Docker Desktop: https://www.docker.com/products/docker-desktop"
-    Write-Info "  • Git: https://git-scm.com/downloads"
     Write-Host ""
     exit 1
 }

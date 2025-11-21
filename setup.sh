@@ -57,14 +57,12 @@ all_prerequisites_met=true
 
 check_command "docker" "Docker" || all_prerequisites_met=false
 check_command "docker-compose" "Docker Compose" || all_prerequisites_met=false
-check_command "git" "Git" || all_prerequisites_met=false
 
 if [ "$all_prerequisites_met" = false ]; then
     echo ""
     print_warning "Certains prérequis sont manquants. Veuillez les installer:"
     print_info "  • Docker: https://docs.docker.com/get-docker/"
     print_info "  • Docker Compose: https://docs.docker.com/compose/install/"
-    print_info "  • Git: https://git-scm.com/downloads"
     echo ""
     exit 1
 fi

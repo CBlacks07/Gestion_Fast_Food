@@ -10,7 +10,8 @@ Avant de commencer l'installation, assurez-vous d'avoir installé :
   - Windows/Mac: [Télécharger Docker Desktop](https://www.docker.com/products/docker-desktop)
   - Linux: [Installer Docker Engine](https://docs.docker.com/engine/install/)
 - **Docker Compose** (généralement inclus avec Docker Desktop)
-- **Git** (pour cloner le projet)
+
+> **Note:** Git n'est nécessaire que si vous devez cloner le projet depuis GitHub. Si vous avez déjà les fichiers (téléchargement ZIP ou autre), Git n'est pas requis.
 
 ### Vérification des prérequis
 
@@ -18,14 +19,12 @@ Avant de commencer l'installation, assurez-vous d'avoir installé :
 ```powershell
 docker --version
 docker-compose --version
-git --version
 ```
 
 **Linux/Mac (Terminal):**
 ```bash
 docker --version
 docker-compose --version
-git --version
 ```
 
 ## 🎯 Installation Automatique
