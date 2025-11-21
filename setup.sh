@@ -42,27 +42,14 @@ echo -e "${NC}"
 # Étape 1: Vérification des prérequis
 print_title "Vérification des prérequis"
 
-check_command() {
-    if command -v $1 &> /dev/null; then
-        version=$($1 --version 2>&1 | head -n 1)
-        print_success "$2 installé: $version"
-        return 0
-    else
-        print_error "$2 n'est pas installé"
-        return 1
-    fi
-}
-
-all_prerequisites_met=true
-
-check_command "docker" "Docker" || all_prerequisites_met=false
-check_command "docker-compose" "Docker Compose" || all_prerequisites_met=false
-
-if [ "$all_prerequisites_met" = false ]; then
+if command -v docker &> /dev/null; then
+    docker_version=$(docker --version 2>&1)
+    print_success "Docker installé: $docker_version"
+else
+    print_error "Docker n'est pas installé"
     echo ""
-    print_warning "Certains prérequis sont manquants. Veuillez les installer:"
-    print_info "  • Docker: https://docs.docker.com/get-docker/"
-    print_info "  • Docker Compose: https://docs.docker.com/compose/install/"
+    print_warning "Docker est requis pour exécuter cette application."
+    print_info "  • Télécharger Docker: https://docs.docker.com/get-docker/"
     echo ""
     exit 1
 fi
@@ -151,7 +138,7 @@ fi
 # Étape 3: Nettoyage des anciens containers
 print_title "Nettoyage des anciens containers"
 
-if docker-compose down -v &> /dev/null; then
+if docker compose down -v &> /dev/null; then
     print_success "Anciens containers supprimés"
 else
     print_info "Aucun container à supprimer"
@@ -163,7 +150,7 @@ print_title "Build des images Docker"
 print_info "Construction des images... (cela peut prendre quelques minutes)"
 echo ""
 
-if docker-compose build --no-cache; then
+if docker compose build --no-cache; then
     print_success "Images Docker construites avec succès"
 else
     print_error "Erreur lors du build des images"
@@ -174,7 +161,7 @@ fi
 print_title "Démarrage de l'application"
 
 print_info "Lancement des containers..."
-if docker-compose up -d; then
+if docker compose up -d; then
     print_success "Containers démarrés avec succès"
 else
     print_error "Erreur lors du démarrage"
@@ -205,7 +192,7 @@ echo ""
 if [ "$backend_ready" = true ]; then
     print_success "Backend est opérationnel"
 else
-    print_warning "Le backend met du temps à démarrer. Vérifiez les logs avec: docker-compose logs -f"
+    print_warning "Le backend met du temps à démarrer. Vérifiez les logs avec: docker compose logs -f"
 fi
 
 # Étape 6: Résumé et accès
@@ -225,9 +212,9 @@ echo -e "  ${NC}• Mot de passe: ${YELLOW}admin123${NC}"
 echo ""
 
 print_info "Commandes utiles:"
-echo -e "  ${NC}• Voir les logs: ${CYAN}docker-compose logs -f${NC}"
-echo -e "  ${NC}• Arrêter: ${CYAN}docker-compose down${NC}"
-echo -e "  ${NC}• Redémarrer: ${CYAN}docker-compose restart${NC}"
+echo -e "  ${NC}• Voir les logs: ${CYAN}docker compose logs -f${NC}"
+echo -e "  ${NC}• Arrêter: ${CYAN}docker compose down${NC}"
+echo -e "  ${NC}• Redémarrer: ${CYAN}docker compose restart${NC}"
 echo -e "  ${NC}• Backup DB: ${CYAN}./backup-database.sh${NC}"
 echo -e "  ${NC}• Restore DB: ${CYAN}./restore-database.sh${NC}"
 echo ""

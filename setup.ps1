@@ -39,28 +39,15 @@ Write-Host ""
 # Étape 1: Vérification des prérequis
 Write-Title "Vérification des prérequis"
 
-$prerequisites = @{
-    "Docker" = { docker --version }
-    "Docker Compose" = { docker-compose --version }
+try {
+    $dockerVersion = docker --version 2>&1
+    Write-Success "Docker installé: $dockerVersion"
 }
-
-$allPrerequisitesMet = $true
-
-foreach ($prereq in $prerequisites.Keys) {
-    try {
-        $version = & $prerequisites[$prereq] 2>&1
-        Write-Success "$prereq installé: $version"
-    }
-    catch {
-        Write-Error "$prereq n'est pas installé"
-        $allPrerequisitesMet = $false
-    }
-}
-
-if (-not $allPrerequisitesMet) {
+catch {
+    Write-Error "Docker n'est pas installé"
     Write-Host ""
-    Write-Warning "Certains prérequis sont manquants. Veuillez les installer:"
-    Write-Info "  • Docker Desktop: https://www.docker.com/products/docker-desktop"
+    Write-Warning "Docker est requis pour exécuter cette application."
+    Write-Info "  • Télécharger Docker Desktop: https://www.docker.com/products/docker-desktop"
     Write-Host ""
     exit 1
 }
@@ -153,7 +140,7 @@ else {
 Write-Title "Nettoyage des anciens containers"
 
 try {
-    docker-compose down -v 2>&1 | Out-Null
+    docker compose down -v 2>&1 | Out-Null
     Write-Success "Anciens containers supprimés"
 }
 catch {
@@ -166,7 +153,7 @@ Write-Title "Build des images Docker"
 Write-Info "Construction des images... (cela peut prendre quelques minutes)"
 Write-Host ""
 
-$buildOutput = docker-compose build --no-cache 2>&1
+$buildOutput = docker compose build --no-cache 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Success "Images Docker construites avec succès"
 }
@@ -180,7 +167,7 @@ else {
 Write-Title "Démarrage de l'application"
 
 Write-Info "Lancement des containers..."
-$startOutput = docker-compose up -d 2>&1
+$startOutput = docker compose up -d 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Success "Containers démarrés avec succès"
 }
@@ -219,7 +206,7 @@ if ($backendReady) {
     Write-Success "Backend est opérationnel"
 }
 else {
-    Write-Warning "Le backend met du temps à démarrer. Vérifiez les logs avec: docker-compose logs -f"
+    Write-Warning "Le backend met du temps à démarrer. Vérifiez les logs avec: docker compose logs -f"
 }
 
 # Étape 6: Résumé et accès
@@ -244,11 +231,11 @@ Write-Host ""
 
 Write-Info "Commandes utiles:"
 Write-Color "  • Voir les logs: " "White" -NoNewline
-Write-Color "docker-compose logs -f" "Cyan"
+Write-Color "docker compose logs -f" "Cyan"
 Write-Color "  • Arrêter: " "White" -NoNewline
-Write-Color "docker-compose down" "Cyan"
+Write-Color "docker compose down" "Cyan"
 Write-Color "  • Redémarrer: " "White" -NoNewline
-Write-Color "docker-compose restart" "Cyan"
+Write-Color "docker compose restart" "Cyan"
 Write-Color "  • Backup DB: " "White" -NoNewline
 Write-Color ".\backup-database.ps1" "Cyan"
 Write-Color "  • Restore DB: " "White" -NoNewline

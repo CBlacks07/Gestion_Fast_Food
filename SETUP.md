@@ -9,22 +9,21 @@ Avant de commencer l'installation, assurez-vous d'avoir installé :
 - **Docker Desktop** (Windows/Mac) ou **Docker Engine** (Linux)
   - Windows/Mac: [Télécharger Docker Desktop](https://www.docker.com/products/docker-desktop)
   - Linux: [Installer Docker Engine](https://docs.docker.com/engine/install/)
-- **Docker Compose** (généralement inclus avec Docker Desktop)
 
-> **Note:** Git n'est nécessaire que si vous devez cloner le projet depuis GitHub. Si vous avez déjà les fichiers (téléchargement ZIP ou autre), Git n'est pas requis.
+> **Note:** Docker Compose v2 est intégré dans Docker Desktop et Docker Engine moderne. La commande `docker compose` (avec espace) est utilisée au lieu de l'ancienne commande `docker-compose` (avec tiret).
 
 ### Vérification des prérequis
 
 **Windows (PowerShell):**
 ```powershell
 docker --version
-docker-compose --version
+docker compose version
 ```
 
 **Linux/Mac (Terminal):**
 ```bash
 docker --version
-docker-compose --version
+docker compose version
 ```
 
 ## 🎯 Installation Automatique
@@ -114,31 +113,31 @@ Gestion_Fast_Food/
 
 **Voir les logs en temps réel:**
 ```bash
-docker-compose logs -f
+docker compose logs -f
 # Ou pour un service spécifique:
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 **Arrêter l'application:**
 ```bash
-docker-compose down
+docker compose down
 ```
 
 **Redémarrer l'application:**
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 **Redémarrer avec reconstruction:**
 ```bash
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
 
 **Voir l'état des containers:**
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### Gestion de la base de données
@@ -172,9 +171,9 @@ docker-compose ps
 
 **Linux/Mac:**
 ```bash
-docker-compose down -v
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ## 🐛 Dépannage
@@ -198,20 +197,20 @@ docker-compose up -d
 **Le backend ne répond pas après 60 secondes:**
 ```bash
 # Vérifier les logs du backend
-docker-compose logs backend
+docker compose logs backend
 
 # Vérifier que PostgreSQL est démarré
-docker-compose ps postgres
+docker compose ps postgres
 ```
 
 **Erreur de connexion à la base de données:**
 ```bash
 # Redémarrer tous les services
-docker-compose restart
+docker compose restart
 
 # Si le problème persiste, recréer les volumes
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ### Port déjà utilisé
@@ -240,7 +239,7 @@ Pour repartir de zéro :
 
 ```bash
 # Arrêter et supprimer tous les containers, volumes et images
-docker-compose down -v
+docker compose down -v
 docker rmi $(docker images 'gestion_fast_food*' -q)
 
 # Supprimer le fichier .env
@@ -286,8 +285,8 @@ Remove-Item .env  # Windows
 
 En cas de problème :
 
-1. Consultez les logs : `docker-compose logs -f`
-2. Vérifiez l'état des services : `docker-compose ps`
+1. Consultez les logs : `docker compose logs -f`
+2. Vérifiez l'état des services : `docker compose ps`
 3. Consultez la documentation Docker
 4. Créez une issue sur le repository GitHub
 
@@ -313,7 +312,7 @@ Après l'installation réussie :
 - [ ] Catégories visibles
 - [ ] Produits ajoutés
 - [ ] Commande test réussie
-- [ ] Backup automatique activé (vérifier avec `docker-compose ps`)
+- [ ] Backup automatique activé (vérifier avec `docker compose ps`)
 
 ---
 
