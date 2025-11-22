@@ -8,6 +8,8 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]); // Date du jour par défaut
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // Tri décroissant par défaut
 
   const user = useAuthStore((state) => state.user);
   const isManager = user?.role === 'MANAGER';
@@ -23,16 +25,43 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders();
-  }, [selectedStatus]);
+  }, [selectedStatus, selectedDate]);
+
+  // Réappliquer le tri quand l'ordre change
+  useEffect(() => {
+    if (orders.length > 0) {
+      const sortedOrders = [...orders].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+      setOrders(sortedOrders);
+    }
+  }, [sortOrder]);
 
   const loadOrders = async () => {
     try {
       setIsLoading(true);
-      const params = selectedStatus !== 'all' ? { status: selectedStatus } : {};
+      const params: any = {};
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      if (selectedDate) {
+        params.date = selectedDate;
+      }
+
       const response = await ordersApi.getAll(params);
 
       if (response.success && response.data) {
-        setOrders(response.data);
+        // Appliquer le tri local selon l'ordre sélectionné
+        const sortedOrders = [...response.data].sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
+        setOrders(sortedOrders);
       }
     } catch (error) {
       console.error('Erreur de chargement:', error);
@@ -116,6 +145,47 @@ export default function OrdersPage() {
           >
             🔄 Rafraîchir
           </button>
+        </div>
+
+        {/* Filtres de date et tri */}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
+              📅 Date:
+            </label>
+            <input
+              id="date-filter"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <button
+              onClick={() => setSelectedDate('')}
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Afficher toutes les dates"
+            >
+              Toutes les dates
+            </button>
+            <button
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              className="px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+              title="Aujourd'hui"
+            >
+              Aujourd'hui
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm font-medium text-gray-700">Tri:</span>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+              title={sortOrder === 'desc' ? 'Plus récentes d\'abord' : 'Plus anciennes d\'abord'}
+            >
+              {sortOrder === 'desc' ? '🔽 Récentes' : '🔼 Anciennes'}
+            </button>
+          </div>
         </div>
 
         {/* Filtres de statut */}
