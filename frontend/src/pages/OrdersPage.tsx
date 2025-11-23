@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ordersApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import type { Order, OrderStatus } from '../types';
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [rawOrders, setRawOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -23,21 +23,18 @@ export default function OrdersPage() {
     { value: 'CANCELLED', label: 'Annulée', icon: '❌' },
   ];
 
+  // Tri automatique avec useMemo pour éviter les re-rendus inutiles
+  const orders = useMemo(() => {
+    return [...rawOrders].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [rawOrders, sortOrder]);
+
   useEffect(() => {
     loadOrders();
   }, [selectedStatus, selectedDate]);
-
-  // Réappliquer le tri quand l'ordre change
-  useEffect(() => {
-    if (orders.length > 0) {
-      const sortedOrders = [...orders].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-      });
-      setOrders(sortedOrders);
-    }
-  }, [sortOrder]);
 
   const loadOrders = async () => {
     try {
@@ -55,13 +52,7 @@ export default function OrdersPage() {
       const response = await ordersApi.getAll(params);
 
       if (response.success && response.data) {
-        // Appliquer le tri local selon l'ordre sélectionné
-        const sortedOrders = [...response.data].sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-        });
-        setOrders(sortedOrders);
+        setRawOrders(response.data);
       }
     } catch (error) {
       console.error('Erreur de chargement:', error);
