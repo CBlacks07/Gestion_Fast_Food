@@ -2,31 +2,37 @@
 
 ## 🚀 Réparation Complète du Logo (RECOMMANDÉ)
 
-Ouvrez **PowerShell en Administrateur** et exécutez :
+Ouvrez **PowerShell** et exécutez :
 
 ```powershell
 # 1. Récupérer le dernier code
 git pull origin claude/order-sorting-daily-filter-01NWwgDgNZH5MopPM7RUiLJD
 
-# 2. Exécuter le script de réparation complète
-.\fix-everything.ps1
+# 2. Exécuter le script de réparation (VERSION CORRIGÉE)
+.\fix-everything-v2.ps1
 ```
 
-Ce script fait **TOUT automatiquement** :
+**OU la version rapide (sans nettoyage de BDD) :**
+
+```powershell
+.\rebuild-quick.ps1
+```
+
+Ces scripts font **TOUT automatiquement** :
 - ✅ Nettoie et reconstruit le frontend
-- ✅ Corrige les URLs en base de données
+- ✅ Corrige les URLs en base de données (v2 uniquement)
 - ✅ Redémarre les containers
 
 ---
 
 ## 🔧 Options Alternatives
 
-### Option 1 : Reconstruction Rapide (sans BDD)
+### Option 1 : Reconstruction Rapide (RECOMMANDÉ)
 
-Si vous voulez juste reconstruire le frontend sans toucher à la base :
+La plus simple et la plus rapide :
 
 ```powershell
-.\rebuild-frontend-simple.ps1
+.\rebuild-quick.ps1
 ```
 
 ### Option 2 : Nettoyer uniquement la base de données
@@ -34,7 +40,7 @@ Si vous voulez juste reconstruire le frontend sans toucher à la base :
 Si le frontend est déjà reconstruit, mais les URLs sont incorrectes :
 
 ```powershell
-.\fix-database-urls.ps1
+.\clean-database.ps1
 ```
 
 ---
