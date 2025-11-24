@@ -32,7 +32,12 @@ const generateReceiptHTML = (
 ): string => {
   const appName = appSettings?.appName || 'Gestion Fast-Food';
   const appIcon = appSettings?.appIcon || '🍔';
-  const logoUrl = appSettings?.logoUrl || '';
+  // Construire l'URL complète du logo pour l'impression
+  const logoUrl = appSettings?.logoUrl
+    ? (appSettings.logoUrl.startsWith('http')
+        ? appSettings.logoUrl
+        : `${window.location.origin}${appSettings.logoUrl}`)
+    : '';
   const companyEmail = appSettings?.companyEmail || '';
 
   return `

@@ -1,0 +1,6 @@
+# Ignorer tous les fichiers uploadés
+*
+
+# Sauf .gitkeep et .gitignore
+!.gitkeep
+!.gitignore

@@ -82,10 +82,9 @@ export default function AppSettingsPage() {
       });
 
       if (response.data.success && response.data.data) {
-        // Préfixer l'URL avec le domaine du backend
-        const logoUrl = `${API_BASE_URL}${response.data.data.url}`;
+        // Utiliser l'URL relative pour que Nginx puisse faire le proxy
+        const logoUrl = response.data.data.url; // déjà au format '/uploads/...'
         console.log('✅ Logo uploadé avec succès. URL:', logoUrl);
-        console.log('📍 API_BASE_URL:', API_BASE_URL);
 
         // Mettre à jour le formData local
         handleInputChange('logoUrl', logoUrl);
