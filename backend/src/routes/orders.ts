@@ -300,6 +300,26 @@ export default async function ordersRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const { status } = request.body as { status: string };
 
+      // Vérifier si la commande est déjà annulée
+      const existingOrder = await prisma.order.findUnique({
+        where: { id },
+        select: { status: true, orderNumber: true },
+      });
+
+      if (!existingOrder) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Commande introuvable',
+        });
+      }
+
+      if (existingOrder.status === 'CANCELLED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Impossible de modifier une commande annulée',
+        });
+      }
+
       const order = await prisma.order.update({
         where: { id },
         data: { status: status as any },
