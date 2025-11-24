@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAppSettingsStore } from '../store/appSettingsStore';
 import type { AppSettings, ApiResponse } from '../types';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 export default function AppSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +81,8 @@ export default function AppSettingsPage() {
       });
 
       if (response.data.success && response.data.data) {
-        const logoUrl = response.data.data.url;
+        // Préfixer l'URL avec le domaine du backend
+        const logoUrl = `${API_BASE_URL}${response.data.data.url}`;
         handleInputChange('logoUrl', logoUrl);
         alert('Logo uploadé avec succès !');
       }
