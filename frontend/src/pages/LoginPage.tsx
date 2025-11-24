@@ -54,7 +54,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">{settings?.appIcon || '🍔'}</div>
+          {/* Logo ou Icône */}
+          <div className="flex justify-center mb-4">
+            {settings?.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt={settings.appName || 'Logo'}
+                className="h-24 w-auto object-contain"
+                onError={(e) => {
+                  console.error('❌ Erreur chargement logo login:', settings.logoUrl);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="text-6xl">{settings?.appIcon || '🍔'}</div>
+            )}
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{settings?.appName || 'Gestion Fast-Food'}</h1>
           {settings?.slogan && (
             <p className="text-gray-600 mb-2">{settings.slogan}</p>
@@ -115,12 +130,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Comptes de démonstration :</p>
-          <p className="mt-2">admin / Admin123 (Admin)</p>
-          <p>cashier / Cashier123 (Caissier)</p>
-        </div>
       </div>
     </div>
   );

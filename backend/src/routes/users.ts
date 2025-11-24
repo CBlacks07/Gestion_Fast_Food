@@ -318,7 +318,7 @@ export default async function usersRoutes(app: FastifyInstance) {
         });
       }
 
-      // Commandes créées par cet utilisateur
+      // Commandes créées par cet utilisateur (exclure les annulées des stats)
       const orders = await prisma.order.findMany({
         where: {
           userId: id,
@@ -357,11 +357,15 @@ export default async function usersRoutes(app: FastifyInstance) {
         },
       });
 
-      // Calculer les statistiques
+      // Calculer les statistiques (exclure les commandes annulées du chiffre d'affaires)
       const totalOrders = orders.length;
-      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
       const cancelledOrders = orders.filter(o => o.status === 'CANCELLED').length;
       const completedOrders = orders.filter(o => o.status === 'DELIVERED').length;
+
+      // Revenu total : seulement les commandes NON annulées
+      const activeOrders = orders.filter(o => o.status !== 'CANCELLED');
+      const totalRevenue = activeOrders.reduce((sum, order) => sum + Number(order.total), 0);
+      const activeOrdersCount = activeOrders.length;
 
       // Produits vendus avec quantités
       const productsSold: Record<string, { name: string; quantity: number; revenue: number }> = {};
@@ -428,7 +432,7 @@ export default async function usersRoutes(app: FastifyInstance) {
             completedOrders,
             cancelledOrders,
             totalRevenue,
-            averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+            averageOrderValue: activeOrdersCount > 0 ? totalRevenue / activeOrdersCount : 0,
           },
           orders,
           topProducts,
@@ -496,7 +500,9 @@ export default async function usersRoutes(app: FastifyInstance) {
 
           const totalOrders = orders.length;
           const completedOrders = orders.filter(o => o.status === 'DELIVERED').length;
-          const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+          // Exclure les commandes annulées du chiffre d'affaires
+          const activeOrders = orders.filter(o => o.status !== 'CANCELLED');
+          const totalRevenue = activeOrders.reduce((sum, order) => sum + Number(order.total), 0);
           const totalPayments = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
 
           return {

@@ -40,3 +40,8 @@ prisma/.env
 
 # OS
 Thumbs.db
+
+# Installation / Build
+installer/
+*.exe
+icon.ico

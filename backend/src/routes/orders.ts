@@ -300,6 +300,26 @@ export default async function ordersRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const { status } = request.body as { status: string };
 
+      // Vérifier si la commande est déjà annulée
+      const existingOrder = await prisma.order.findUnique({
+        where: { id },
+        select: { status: true, orderNumber: true },
+      });
+
+      if (!existingOrder) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Commande introuvable',
+        });
+      }
+
+      if (existingOrder.status === 'CANCELLED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Impossible de modifier une commande annulée',
+        });
+      }
+
       const order = await prisma.order.update({
         where: { id },
         data: { status: status as any },
@@ -332,6 +352,12 @@ export default async function ordersRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const { userId } = request.body as { userId?: string };
 
+      // Supprimer d'abord tous les paiements associés à cette commande
+      await prisma.payment.deleteMany({
+        where: { orderId: id },
+      });
+
+      // Ensuite, marquer la commande comme annulée
       const order = await prisma.order.update({
         where: { id },
         data: { status: 'CANCELLED' },
@@ -346,14 +372,14 @@ export default async function ordersRoutes(app: FastifyInstance) {
           type: 'ORDER_CANCELLED',
           userId,
           targetId: id,
-          description: `Commande annulée: ${order.orderNumber}`,
+          description: `Commande annulée: ${order.orderNumber} (paiements supprimés)`,
           metadata: { total: order.total },
         });
       }
 
       return reply.send({
         success: true,
-        message: 'Commande annulée avec succès',
+        message: 'Commande annulée avec succès (paiements supprimés)',
         data: order,
       });
     } catch (error) {

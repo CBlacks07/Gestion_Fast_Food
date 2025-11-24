@@ -307,7 +307,8 @@ export default function OrdersPage() {
                 <select
                   value={selectedOrder.status}
                   onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as OrderStatus)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  disabled={selectedOrder.status === 'CANCELLED'}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="PENDING">En attente</option>
                   <option value="PREPARING">En préparation</option>
@@ -315,6 +316,11 @@ export default function OrdersPage() {
                   <option value="DELIVERED">Livrée</option>
                   <option value="CANCELLED">Annulée</option>
                 </select>
+                {selectedOrder.status === 'CANCELLED' && (
+                  <p className="text-sm text-red-600 mt-2">
+                    ⚠️ Cette commande est annulée et ne peut plus être modifiée
+                  </p>
+                )}
               </div>
 
               {/* Informations */}

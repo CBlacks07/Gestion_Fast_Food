@@ -16,6 +16,10 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
 
   const isAdmin = userRole === 'ADMIN';
 
+  // Debugging: Log settings when they change
+  console.log('🔍 Layout - Settings actuels:', settings);
+  console.log('🖼️ Layout - Logo URL:', settings?.logoUrl);
+
   // Menu principal basé sur le rôle
   const menuItems = [
     { path: '/pos', label: 'Point de Vente', icon: '🛒', roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
@@ -42,11 +46,23 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
             {settings?.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.appName || 'Logo'}
-                className="w-10 h-10 object-contain"
-              />
+              <div className="w-12 h-12 flex items-center justify-center bg-white rounded">
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.appName || 'Logo'}
+                  className="max-w-full max-h-full object-contain"
+                  crossOrigin="anonymous"
+                  onLoad={() => {
+                    console.log('✅ Logo chargé avec succès:', settings.logoUrl);
+                  }}
+                  onError={(e) => {
+                    console.error('❌ Erreur de chargement du logo:', settings.logoUrl);
+                    console.error('❌ Détails:', e);
+                    // Fallback vers l'icône
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
             ) : (
               <span className="text-2xl">{settings?.appIcon || '🍔'}</span>
             )}
