@@ -74,6 +74,7 @@ export default function AppSettingsPage() {
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log('🔄 Upload du logo en cours...');
       const response = await api.post('/api/upload/logo', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -83,14 +84,41 @@ export default function AppSettingsPage() {
       if (response.data.success && response.data.data) {
         // Préfixer l'URL avec le domaine du backend
         const logoUrl = `${API_BASE_URL}${response.data.data.url}`;
+        console.log('✅ Logo uploadé avec succès. URL:', logoUrl);
+        console.log('📍 API_BASE_URL:', API_BASE_URL);
+
+        // Mettre à jour le formData local
         handleInputChange('logoUrl', logoUrl);
-        alert('Logo uploadé avec succès !');
+
+        // Auto-sauvegarder immédiatement pour appliquer le logo
+        await handleSaveAfterLogoUpload(logoUrl);
       }
     } catch (error: any) {
-      console.error('Erreur:', error);
+      console.error('❌ Erreur upload logo:', error);
       alert(error.response?.data?.error || 'Erreur lors de l\'upload du logo');
     } finally {
       setIsUploadingLogo(false);
+    }
+  };
+
+  const handleSaveAfterLogoUpload = async (logoUrl: string) => {
+    try {
+      const response = await api.put('/api/app-settings', {
+        ...formData,
+        logoUrl,
+        userId: user?.id,
+      });
+
+      if (response.data.success && response.data.data) {
+        console.log('✅ Paramètres sauvegardés avec le nouveau logo');
+        // Mettre à jour le store global pour appliquer immédiatement les changements
+        updateGlobalSettings(response.data.data);
+        alert('Logo uploadé et appliqué avec succès !');
+        loadSettings();
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur sauvegarde après upload:', error);
+      alert('Logo uploadé mais erreur lors de la sauvegarde. Cliquez sur Sauvegarder pour appliquer.');
     }
   };
 
