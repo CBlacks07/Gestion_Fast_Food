@@ -65,7 +65,9 @@ export default function TeamPage() {
       setIsLoading(true);
       const response = await usersApi.getAllUsersStats(selectedDate);
       if (response.success && response.data) {
-        setUserStats(response.data.users);
+        // Filtrer pour exclure les ADMIN (le gérant ne doit pas les voir)
+        const filteredUsers = response.data.users.filter((stat: UserStats) => stat.user.role !== 'ADMIN');
+        setUserStats(filteredUsers);
       }
     } catch (error) {
       console.error('Erreur:', error);
