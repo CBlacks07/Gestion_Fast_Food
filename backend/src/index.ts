@@ -3,7 +3,10 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
+import { join } from 'path';
 
 // Import des routes
 import authRoutes from './routes/auth';
@@ -15,6 +18,7 @@ import ingredientsRoutes from './routes/ingredients';
 import usersRoutes from './routes/users';
 import closuresRoutes from './routes/closures';
 import appSettingsRoutes from './routes/app-settings';
+import uploadRoutes from './routes/upload';
 import { dbHealthCheckMiddleware, checkDbConnection } from './middleware/dbHealthCheck';
 
 dotenv.config();
@@ -64,6 +68,19 @@ app.register(rateLimit, {
   }),
 });
 
+// Multipart pour l'upload de fichiers
+app.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+});
+
+// Servir les fichiers statiques (uploads)
+app.register(fastifyStatic, {
+  root: join(process.cwd(), 'uploads'),
+  prefix: '/uploads/',
+});
+
 // Routes de base
 app.get('/health', async () => {
   const dbConnected = await checkDbConnection();
@@ -98,6 +115,7 @@ app.register(ingredientsRoutes, { prefix: '/api/ingredients' });
 app.register(usersRoutes, { prefix: '/api/users' });
 app.register(closuresRoutes, { prefix: '/api/closures' });
 app.register(appSettingsRoutes, { prefix: '/api/app-settings' });
+app.register(uploadRoutes, { prefix: '/api/upload' });
 
 // Démarrage du serveur
 const start = async () => {

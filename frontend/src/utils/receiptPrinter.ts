@@ -32,6 +32,7 @@ const generateReceiptHTML = (
 ): string => {
   const appName = appSettings?.appName || 'Gestion Fast-Food';
   const appIcon = appSettings?.appIcon || '🍔';
+  const logoUrl = appSettings?.logoUrl || '';
   const companyEmail = appSettings?.companyEmail || '';
 
   return `
@@ -148,7 +149,11 @@ const generateReceiptHTML = (
     </head>
     <body>
       <div class="header">
-        <div class="title">${appIcon} ${appName.toUpperCase()}</div>
+        ${logoUrl
+          ? `<img src="${logoUrl}" alt="Logo" style="max-width: 100px; max-height: 60px; margin: 0 auto 10px; display: block;" />`
+          : `<div class="title">${appIcon} ${appName.toUpperCase()}</div>`
+        }
+        ${logoUrl ? `<div class="title">${appName.toUpperCase()}</div>` : ''}
         <div>Ticket de caisse</div>
       </div>
 
