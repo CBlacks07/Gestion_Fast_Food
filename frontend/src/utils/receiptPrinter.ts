@@ -1,7 +1,12 @@
-import type { Order } from '../types';
+import type { Order, AppSettings } from '../types';
 
-export const printReceipt = (order: Order, amountPaid?: number, change?: number) => {
-  const receiptContent = generateReceiptHTML(order, amountPaid, change);
+export const printReceipt = (
+  order: Order,
+  appSettings?: AppSettings | null,
+  amountPaid?: number,
+  change?: number
+) => {
+  const receiptContent = generateReceiptHTML(order, appSettings, amountPaid, change);
 
   // Ouvrir une nouvelle fenêtre pour l'impression
   const printWindow = window.open('', '', 'width=300,height=600');
@@ -19,7 +24,16 @@ export const printReceipt = (order: Order, amountPaid?: number, change?: number)
   }
 };
 
-const generateReceiptHTML = (order: Order, amountPaid?: number, change?: number): string => {
+const generateReceiptHTML = (
+  order: Order,
+  appSettings?: AppSettings | null,
+  amountPaid?: number,
+  change?: number
+): string => {
+  const appName = appSettings?.appName || 'Gestion Fast-Food';
+  const appIcon = appSettings?.appIcon || '🍔';
+  const companyEmail = appSettings?.companyEmail || '';
+
   return `
     <!DOCTYPE html>
     <html>
@@ -134,7 +148,7 @@ const generateReceiptHTML = (order: Order, amountPaid?: number, change?: number)
     </head>
     <body>
       <div class="header">
-        <div class="title">🍔 GESTION FAST-FOOD</div>
+        <div class="title">${appIcon} ${appName.toUpperCase()}</div>
         <div>Ticket de caisse</div>
       </div>
 
@@ -226,7 +240,7 @@ const generateReceiptHTML = (order: Order, amountPaid?: number, change?: number)
       <div class="footer">
         <div>Merci de votre visite !</div>
         <div>À bientôt 😊</div>
-        <div style="margin-top: 10px;">www.fast-food.com</div>
+        ${companyEmail ? `<div style="margin-top: 10px;">${companyEmail}</div>` : ''}
       </div>
     </body>
     </html>

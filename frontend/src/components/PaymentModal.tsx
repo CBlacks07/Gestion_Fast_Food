@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { useAppSettingsStore } from '../store/appSettingsStore';
 import { ordersApi, paymentsApi } from '../services/api';
 import { printReceipt } from '../utils/receiptPrinter';
 import type { PaymentMethod } from '../types';
@@ -23,6 +24,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
   } = useCartStore();
 
   const user = useAuthStore((state) => state.user);
+  const appSettings = useAppSettingsStore((state) => state.settings);
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('CASH');
   const [amountPaid, setAmountPaid] = useState<string>('');
@@ -113,7 +115,7 @@ export default function PaymentModal({ onClose, onSuccess }: PaymentModalProps) 
 
       // 3. Imprimer le reçu avec le montant payé et la monnaie
       const change = selectedMethod === 'CASH' ? amount - total : 0;
-      printReceipt(order, amount, change);
+      printReceipt(order, appSettings, amount, change);
 
       // 4. Succès - Vider le panier et fermer
       clear();
