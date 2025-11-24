@@ -37,16 +37,13 @@ app.register(cors, {
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
 });
 
-// Headers de sécurité avec Helmet
+// Headers de sécurité avec Helmet - Désactiver CSP pour permettre les images
 app.register(helmet, {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-  },
+  contentSecurityPolicy: false, // Désactiver pour éviter les problèmes avec les images
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Permettre le chargement cross-origin
 });
 
 // Configuration JWT
@@ -79,6 +76,15 @@ app.register(multipart, {
 app.register(fastifyStatic, {
   root: join(process.cwd(), 'uploads'),
   prefix: '/uploads/',
+  decorateReply: false, // Ne pas décorer reply pour éviter les conflits
+});
+
+// Hook pour ajouter les headers CORS aux fichiers statiques
+app.addHook('onSend', async (request, reply) => {
+  if (request.url.startsWith('/uploads/')) {
+    reply.header('Access-Control-Allow-Origin', '*');
+    reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
 });
 
 // Routes de base
