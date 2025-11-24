@@ -130,12 +130,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Comptes de démonstration :</p>
-          <p className="mt-2">admin / Admin123 (Admin)</p>
-          <p>cashier / Cashier123 (Caissier)</p>
-        </div>
       </div>
     </div>
   );
