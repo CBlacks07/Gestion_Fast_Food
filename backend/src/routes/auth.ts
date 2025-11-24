@@ -5,13 +5,13 @@ import { logActivity } from '../utils/activityLogger';
 import { requireAuth } from '../middleware/auth';
 
 export default async function authRoutes(app: FastifyInstance) {
-  // POST /api/auth/login - Connexion avec rate limiting strict
+  // POST /api/auth/login - Connexion avec rate limiting
   app.post(
     '/login',
     {
       config: {
         rateLimit: {
-          max: 5,
+          max: 50,
           timeWindow: '15 minutes',
         },
       },
