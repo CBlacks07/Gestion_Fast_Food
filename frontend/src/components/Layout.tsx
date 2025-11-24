@@ -42,11 +42,17 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
         <div className="p-4 border-b">
           <div className="flex items-center gap-3">
             {settings?.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.appName || 'Logo'}
-                className="w-10 h-10 object-contain"
-              />
+              <div className="w-12 h-12 flex items-center justify-center">
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.appName || 'Logo'}
+                  className="max-w-full max-h-full object-contain"
+                  onError={(e) => {
+                    console.error('Erreur de chargement du logo:', settings.logoUrl);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
             ) : (
               <span className="text-2xl">{settings?.appIcon || '🍔'}</span>
             )}
