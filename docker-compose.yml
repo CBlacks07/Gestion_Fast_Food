@@ -30,14 +30,14 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: "postgresql://fastfood_admin:FastFood2025!Secure@postgres:5432/fastfood_db?schema=public"
-      PORT: 3000
+      PORT: 3002
       HOST: 0.0.0.0
       NODE_ENV: production
       JWT_SECRET: "${JWT_SECRET:-fastfood-jwt-secret-change-me-in-production}"
       JWT_EXPIRES_IN: "24h"
       ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://127.0.0.1"
     ports:
-      - "3000:3000"
+      - "3002:3002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
     depends_on:
       - backend
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: http://localhost:3002
 
 volumes:
   postgres_data:

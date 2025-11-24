@@ -40,10 +40,20 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
       <aside className="w-64 bg-white border-r flex flex-col">
         {/* Logo */}
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span>{settings?.appIcon || '🍔'}</span>
-            <span>{settings?.appName || 'Fast-Food'}</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            {settings?.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt={settings.appName || 'Logo'}
+                className="w-10 h-10 object-contain"
+              />
+            ) : (
+              <span className="text-2xl">{settings?.appIcon || '🍔'}</span>
+            )}
+            <h1 className="text-lg font-bold text-gray-900 flex-1">
+              {settings?.appName || 'Fast-Food'}
+            </h1>
+          </div>
         </div>
 
         {/* Navigation */}

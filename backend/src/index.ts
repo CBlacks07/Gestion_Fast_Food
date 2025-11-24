@@ -3,7 +3,10 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
+import { join } from 'path';
 
 // Import des routes
 import authRoutes from './routes/auth';
@@ -15,6 +18,7 @@ import ingredientsRoutes from './routes/ingredients';
 import usersRoutes from './routes/users';
 import closuresRoutes from './routes/closures';
 import appSettingsRoutes from './routes/app-settings';
+import uploadRoutes from './routes/upload';
 import { dbHealthCheckMiddleware, checkDbConnection } from './middleware/dbHealthCheck';
 
 dotenv.config();
@@ -33,16 +37,13 @@ app.register(cors, {
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
 });
 
-// Headers de sécurité avec Helmet
+// Headers de sécurité avec Helmet - Désactiver CSP pour permettre les images
 app.register(helmet, {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-  },
+  contentSecurityPolicy: false, // Désactiver pour éviter les problèmes avec les images
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Permettre le chargement cross-origin
 });
 
 // Configuration JWT
@@ -62,6 +63,28 @@ app.register(rateLimit, {
     success: false,
     error: 'Trop de requêtes. Veuillez réessayer dans quelques instants.',
   }),
+});
+
+// Multipart pour l'upload de fichiers
+app.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+});
+
+// Servir les fichiers statiques (uploads)
+app.register(fastifyStatic, {
+  root: join(process.cwd(), 'uploads'),
+  prefix: '/uploads/',
+  decorateReply: false, // Ne pas décorer reply pour éviter les conflits
+});
+
+// Hook pour ajouter les headers CORS aux fichiers statiques
+app.addHook('onSend', async (request, reply) => {
+  if (request.url.startsWith('/uploads/')) {
+    reply.header('Access-Control-Allow-Origin', '*');
+    reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
 });
 
 // Routes de base
@@ -98,6 +121,7 @@ app.register(ingredientsRoutes, { prefix: '/api/ingredients' });
 app.register(usersRoutes, { prefix: '/api/users' });
 app.register(closuresRoutes, { prefix: '/api/closures' });
 app.register(appSettingsRoutes, { prefix: '/api/app-settings' });
+app.register(uploadRoutes, { prefix: '/api/upload' });
 
 // Démarrage du serveur
 const start = async () => {

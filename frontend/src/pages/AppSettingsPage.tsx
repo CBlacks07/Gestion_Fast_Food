@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAppSettingsStore } from '../store/appSettingsStore';
 import type { AppSettings, ApiResponse } from '../types';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 
 export default function AppSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<AppSettings>>({});
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === 'ADMIN';
@@ -60,6 +61,36 @@ export default function AppSettingsPage() {
       alert(error.response?.data?.error || 'Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingLogo(true);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/api/upload/logo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success && response.data.data) {
+        // Préfixer l'URL avec le domaine du backend
+        const logoUrl = `${API_BASE_URL}${response.data.data.url}`;
+        handleInputChange('logoUrl', logoUrl);
+        alert('Logo uploadé avec succès !');
+      }
+    } catch (error: any) {
+      console.error('Erreur:', error);
+      alert(error.response?.data?.error || 'Erreur lors de l\'upload du logo');
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
 
@@ -192,18 +223,42 @@ export default function AppSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    URL du logo
+                    Logo de l'application
                   </label>
-                  <input
-                    type="text"
-                    value={formData.logoUrl || ''}
-                    onChange={(e) => handleInputChange('logoUrl', e.target.value)}
-                    placeholder="Ex: https://exemple.com/logo.png"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Optionnel : URL d'un logo personnalisé
-                  </p>
+                  <div className="flex items-start gap-4">
+                    {formData.logoUrl && (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={formData.logoUrl}
+                          alt="Logo"
+                          className="w-24 h-24 object-contain border border-gray-300 rounded-lg bg-white p-2"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isUploadingLogo
+                          ? 'Upload en cours...'
+                          : 'Sélectionnez une image (JPG, PNG, GIF, WEBP - Max 5MB)'}
+                      </p>
+                      {formData.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('logoUrl', '')}
+                          className="mt-2 text-sm text-red-600 hover:text-red-700"
+                        >
+                          Supprimer le logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

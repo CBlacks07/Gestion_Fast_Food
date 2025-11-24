@@ -13,7 +13,7 @@ RUN npm install --production=false
 COPY . .
 
 # Variable d'environnement pour l'API
-ARG VITE_API_URL=http://localhost:3000
+ARG VITE_API_URL=http://localhost:3002
 ENV VITE_API_URL=$VITE_API_URL
 
 # Builder l'application
