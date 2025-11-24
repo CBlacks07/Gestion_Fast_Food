@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useAppSettingsStore } from '../store/appSettingsStore';
 import type { AppSettings, ApiResponse } from '../types';
-import api, { API_BASE_URL } from '../services/api';
+import api from '../services/api';
 
 export default function AppSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
