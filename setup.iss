@@ -3,8 +3,8 @@
 
 #define MyAppName "Gestion Fast-Food"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "Votre Entreprise"
-#define MyAppURL "http://www.example.com/"
+#define MyAppPublisher "OPS CORPORATION"
+#define MyAppURL "mailto:cmaathey@gmail.com"
 #define MyAppExeName "Demarrer.bat"
 
 [Setup]

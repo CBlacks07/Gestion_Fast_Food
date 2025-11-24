@@ -349,14 +349,18 @@ Les contributions sont bienvenues !
 
 MIT License - Libre d'utilisation commerciale
 
+Copyright (c) 2025 OPS CORPORATION
+
 ---
 
 ## 📞 SUPPORT & CONTACT
 
+**OPS CORPORATION**
+📧 Email: cmaathey@gmail.com
+
 - 📖 **Documentation** : Voir les fichiers `.md` dans le projet
-- 🐛 **Bugs** : Ouvrir une issue GitHub
-- 💡 **Questions** : GitHub Discussions
-- 📧 **Commercial** : contact@votreentreprise.com
+- 💡 **Questions** : Contactez-nous à cmaathey@gmail.com
+- 📧 **Support Commercial** : cmaathey@gmail.com
 
 ---
 
@@ -381,8 +385,12 @@ Si ce projet vous aide, donnez-lui une étoile ! ⭐
 
 ---
 
-**Made with ❤️ for fast-food restaurants**
+**Made with ❤️ for fast-food restaurants by OPS CORPORATION**
 
 **Prêt pour la production | Sécurisé | Facile à déployer**
 
 🍔 🍕 🌮 🍟 🥤
+
+---
+
+**OPS CORPORATION** | 📧 cmaathey@gmail.com

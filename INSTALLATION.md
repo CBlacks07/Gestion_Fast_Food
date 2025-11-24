@@ -197,10 +197,13 @@ docker-compose up -d
 
 ## 📞 Support
 
+**OPS CORPORATION**
+📧 Email: cmaathey@gmail.com
+
 Pour toute question ou problème :
 - Consultez la documentation
-- Ouvrez une issue sur GitHub
-- Contactez le support technique
+- Contactez-nous par email à cmaathey@gmail.com
+- Décrivez votre problème de manière détaillée
 
 ---
 
