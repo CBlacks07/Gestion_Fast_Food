@@ -74,7 +74,7 @@ export default function AppSettingsPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('🔄 Upload du logo en cours...');
+      console.log('🔄 Upload du logo en cours... [VERSION 2.0 - URL RELATIVE]');
       const response = await api.post('/api/upload/logo', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -85,6 +85,7 @@ export default function AppSettingsPage() {
         // Utiliser l'URL relative pour que Nginx puisse faire le proxy
         const logoUrl = response.data.data.url; // déjà au format '/uploads/...'
         console.log('✅ Logo uploadé avec succès. URL:', logoUrl);
+        console.log('🎯 Type URL:', logoUrl.startsWith('http') ? '❌ ABSOLUE (ANCIEN CODE!)' : '✅ RELATIVE (NOUVEAU CODE!)');
 
         // Mettre à jour le formData local
         handleInputChange('logoUrl', logoUrl);
