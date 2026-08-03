@@ -1,0 +1,548 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  ClipboardList, Clock, Truck, XCircle,
+  LayoutGrid, RefreshCw, ArrowUpDown, Trash2,
+  Utensils, ShoppingBag, Bike, Banknote, Smartphone, CreditCard, Wallet,
+  X, Inbox,
+} from 'lucide-react';
+import { ordersApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { toast } from '../store/toastStore';
+import ConfirmDialog from '../components/ConfirmDialog';
+import type { Order, OrderStatus } from '../types';
+
+interface OrderParams {
+  status?: string;
+  date?: string;
+}
+
+type LucideIcon = typeof Clock;
+
+interface StatusOption {
+  value: string;
+  label: string;
+  Icon: LucideIcon;
+}
+
+export default function OrdersPage() {
+  const [rawOrders, setRawOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<{ orderId: string } | null>(null);
+
+  const user = useAuthStore((state) => state.user);
+  const isManager = user?.role === 'MANAGER';
+
+  const statusOptions: StatusOption[] = [
+    { value: 'all',       label: 'Toutes',      Icon: LayoutGrid },
+    { value: 'PENDING',   label: 'En attente',  Icon: Clock },
+    { value: 'DELIVERED', label: 'Servi/Livré', Icon: Truck },
+    { value: 'CANCELLED', label: 'Annulée',     Icon: XCircle },
+  ];
+
+  const orders = useMemo(() => {
+    return [...rawOrders].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [rawOrders, sortOrder]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [selectedStatus, selectedDate]);
+
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true);
+      const params: OrderParams = {};
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      if (selectedDate) {
+        params.date = selectedDate;
+      }
+
+      const response = await ordersApi.getAll(params);
+
+      if (response.success && response.data) {
+        setRawOrders(response.data);
+      }
+    } catch (error) {
+      console.error('Erreur de chargement:', error);
+      toast.error('Impossible de charger les commandes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    if (newStatus === 'CANCELLED') {
+      setConfirmCancel({ orderId });
+      return;
+    }
+    await applyStatusChange(orderId, newStatus);
+  };
+
+  const applyStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await ordersApi.updateStatus(orderId, newStatus);
+      toast.success('Statut mis à jour');
+      loadOrders();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (error) {
+      console.error('Erreur de mise à jour:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    if (!isManager) {
+      toast.warning('Seul un gérant peut supprimer une commande');
+      return;
+    }
+    setConfirmDelete(orderId);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!confirmDelete || !user?.id) return;
+
+    try {
+      await ordersApi.cancel(confirmDelete, user.id);
+      toast.success('Commande annulée avec succès');
+      loadOrders();
+      if (selectedOrder?.id === confirmDelete) {
+        setSelectedOrder(null);
+      }
+    } catch (error) {
+      console.error('Erreur de suppression:', error);
+      toast.error('Erreur lors de la suppression de la commande');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
+
+  const getStatusColor = (status: OrderStatus) => {
+    const colors: Record<OrderStatus, string> = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      PREPARING: 'bg-blue-100 text-blue-800',
+      READY: 'bg-green-100 text-green-800',
+      DELIVERED: 'bg-purple-100 text-purple-800',
+      CANCELLED: 'bg-red-100 text-red-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getDeliveredLabel = (type?: string) => {
+    if (type === 'DINE_IN') return 'Servi';
+    if (type === 'TAKEAWAY') return 'Récupéré';
+    return 'Livré';
+  };
+
+  const getStatusLabel = (status: OrderStatus, type?: string) => {
+    if (status === 'DELIVERED') return getDeliveredLabel(type);
+    const labels: Record<OrderStatus, string> = {
+      PENDING: 'En attente',
+      PREPARING: 'En préparation',
+      READY: 'Prête',
+      DELIVERED: 'Livré',
+      CANCELLED: 'Annulée',
+    };
+    return labels[status] || status;
+  };
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b px-6 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ClipboardList size={22} className="text-gray-500" />
+            Historique des Commandes
+          </h1>
+
+          <button
+            onClick={loadOrders}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+          >
+            <RefreshCw size={15} />
+            Rafraîchir
+          </button>
+        </div>
+
+        {/* Filtres de date et tri */}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label htmlFor="date-filter" className="text-sm font-medium text-gray-700">
+              Date:
+            </label>
+            <input
+              id="date-filter"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <button
+              onClick={() => setSelectedDate('')}
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Toutes les dates
+            </button>
+            <button
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              className="px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              Aujourd'hui
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ArrowUpDown size={14} />
+              {sortOrder === 'desc' ? 'Récentes' : 'Anciennes'}
+            </button>
+          </div>
+        </div>
+
+        {/* Filtres de statut */}
+        <div className="mt-3 flex gap-1.5 overflow-x-auto">
+          {statusOptions.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              onClick={() => setSelectedStatus(value)}
+              className={`
+                px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm
+                ${selectedStatus === value
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }
+              `}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <Inbox size={56} strokeWidth={1.2} className="mx-auto mb-4 text-gray-300" />
+            <p className="font-medium">Aucune commande</p>
+            <p className="text-sm mt-1">Les commandes apparaîtront ici</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                onClick={() => setSelectedOrder(order)}
+                className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900">{order.orderNumber}</h3>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.createdAt).toLocaleString('fr-FR')}
+                    </p>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(order.status)}`}>
+                    {getStatusLabel(order.status, order.type)}
+                  </span>
+                </div>
+
+                <div className="space-y-1 mb-3">
+                  {order.items.slice(0, 3).map((item) => (
+                    <div key={item.id} className="text-sm text-gray-600">
+                      <span className="font-medium">{item.quantity}x</span> {item.product.name}
+                    </div>
+                  ))}
+                  {order.items.length > 3 && (
+                    <div className="text-sm text-gray-400">
+                      +{order.items.length - 3} autre(s)
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t">
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                    {order.type === 'DINE_IN' ? <Utensils size={12} /> :
+                     order.type === 'TAKEAWAY' ? <ShoppingBag size={12} /> : <Bike size={12} />}
+                    {order.type === 'DINE_IN' ? 'Sur place' :
+                     order.type === 'TAKEAWAY' ? 'À emporter' : 'Livraison'}
+                    {order.table && ` - Table ${order.table.number}`}
+                  </div>
+                  <div className="font-bold text-primary-600">
+                    {Number(order.total).toLocaleString()} FCFA
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal de détails */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedOrder.orderNumber}</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {new Date(selectedOrder.createdAt).toLocaleString('fr-FR', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Statut */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Statut de la commande
+                </label>
+                <select
+                  value={selectedOrder.status}
+                  onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as OrderStatus)}
+                  disabled={selectedOrder.status === 'DELIVERED' || selectedOrder.status === 'CANCELLED'}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="PENDING">En attente</option>
+                  <option value="DELIVERED">{getDeliveredLabel(selectedOrder.type)}</option>
+                  {(!selectedOrder.payments || selectedOrder.payments.length === 0 || selectedOrder.status === 'CANCELLED') && (
+                    <option value="CANCELLED">Annulée</option>
+                  )}
+                </select>
+                {(selectedOrder.status === 'DELIVERED' || selectedOrder.status === 'CANCELLED') && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {selectedOrder.status === 'DELIVERED'
+                      ? `${getDeliveredLabel(selectedOrder.type)} — statut final`
+                      : 'Annulée — statut final'}
+                  </p>
+                )}
+              </div>
+
+              {/* Informations */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Type</div>
+                  <div className="font-medium flex items-center gap-1.5">
+                    {selectedOrder.type === 'DINE_IN' ? <Utensils size={14} /> :
+                     selectedOrder.type === 'TAKEAWAY' ? <ShoppingBag size={14} /> : <Bike size={14} />}
+                    {selectedOrder.type === 'DINE_IN' ? 'Sur place' :
+                     selectedOrder.type === 'TAKEAWAY' ? 'À emporter' : 'Livraison'}
+                  </div>
+                </div>
+                {selectedOrder.user && (
+                  <div>
+                    <div className="text-sm text-gray-500">Créée par</div>
+                    <div className="font-medium text-gray-900">
+                      {selectedOrder.user.firstName && selectedOrder.user.lastName
+                        ? `${selectedOrder.user.firstName} ${selectedOrder.user.lastName}`
+                        : selectedOrder.user.username}
+                    </div>
+                  </div>
+                )}
+                {selectedOrder.table && (
+                  <div>
+                    <div className="text-sm text-gray-500">Table</div>
+                    <div className="font-medium">Table {selectedOrder.table.number}</div>
+                  </div>
+                )}
+                {selectedOrder.customerName && (
+                  <div>
+                    <div className="text-sm text-gray-500">Client</div>
+                    <div className="font-medium">{selectedOrder.customerName}</div>
+                  </div>
+                )}
+                {selectedOrder.customerPhone && (
+                  <div>
+                    <div className="text-sm text-gray-500">Téléphone</div>
+                    <div className="font-medium">{selectedOrder.customerPhone}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Items */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Articles</h3>
+                <div className="space-y-2">
+                  {selectedOrder.items.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">
+                          {item.quantity}x {item.product.name}
+                        </div>
+                        {item.options && item.options.length > 0 && (
+                          <div className="text-sm text-gray-500 mt-1">
+                            {item.options.map(opt => opt.option.name).join(', ')}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <div className="text-sm text-gray-500 italic mt-1">
+                            Note: {item.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {Number(item.total).toLocaleString()} FCFA
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Totaux */}
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex justify-between text-gray-600">
+                  <span>Sous-total</span>
+                  <span>{Number(selectedOrder.subtotal).toLocaleString()} FCFA</span>
+                </div>
+                {Number(selectedOrder.discount) > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Réduction</span>
+                    <span>-{Number(selectedOrder.discount).toLocaleString()} FCFA</span>
+                  </div>
+                )}
+                {Number(selectedOrder.tax) > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Taxes</span>
+                    <span>{Number(selectedOrder.tax).toLocaleString()} FCFA</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
+                  <span>Total</span>
+                  <span className="text-primary-600">{Number(selectedOrder.total).toLocaleString()} FCFA</span>
+                </div>
+              </div>
+
+              {/* Paiements */}
+              {selectedOrder.payments && selectedOrder.payments.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Paiements</h3>
+                  <div className="space-y-2">
+                    {selectedOrder.payments.map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div>
+                          <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                            {payment.method === 'CASH'   ? <Banknote size={14} /> :
+                             payment.method === 'CARD'   ? <CreditCard size={14} /> :
+                             payment.method === 'FLOOZ'  ? <Wallet size={14} /> :
+                             <Smartphone size={14} />}
+                            {payment.method === 'CASH' ? 'Espèces' :
+                             payment.method === 'TMONEY' ? 'TMoney' :
+                             payment.method === 'FLOOZ' ? 'Flooz' :
+                             payment.method === 'CARD' ? 'Carte' : 'Mobile'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {new Date(payment.createdAt).toLocaleString('fr-FR')}
+                          </div>
+                          {payment.user && (
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              Par: <span className="font-medium text-gray-600">
+                                {payment.user.firstName && payment.user.lastName
+                                  ? `${payment.user.firstName} ${payment.user.lastName}`
+                                  : payment.user.username}
+                              </span>
+                            </div>
+                          )}
+                          {payment.method !== 'CASH' && payment.reference && (
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              Réf: <span className="font-mono font-medium text-gray-600">{payment.reference}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="font-semibold text-green-600">
+                          {Number(payment.amount).toLocaleString()} FCFA
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Bouton de suppression */}
+              {isManager && selectedOrder.status !== 'CANCELLED' && (
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={() => handleDeleteOrder(selectedOrder.id)}
+                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    <span>Supprimer la commande</span>
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Cette action est irréversible (Gérant uniquement)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation annulation de statut */}
+      {confirmCancel && (
+        <ConfirmDialog
+          title="Annuler la commande"
+          message="Êtes-vous sûr de vouloir passer cette commande en statut Annulée ? Cette action ne pourra plus être modifiée."
+          confirmLabel="Oui, annuler"
+          cancelLabel="Non, garder"
+          variant="warning"
+          onConfirm={async () => {
+            await applyStatusChange(confirmCancel.orderId, 'CANCELLED');
+            setConfirmCancel(null);
+          }}
+          onCancel={() => setConfirmCancel(null)}
+        />
+      )}
+
+      {/* Confirmation suppression */}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Supprimer la commande"
+          message="Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible."
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+          variant="danger"
+          onConfirm={confirmDeleteOrder}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+}

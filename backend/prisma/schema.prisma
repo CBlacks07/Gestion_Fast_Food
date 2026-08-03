@@ -1,0 +1,452 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// GESTION DES UTILISATEURS ET RÔLES
+// ============================================
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+  KITCHEN
+  WAITER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      Role     @default(CASHIER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders         Order[]
+  payments       Payment[]
+  dailyClosures  DailyClosure[]
+  activityLogs   ActivityLog[]
+
+  @@map("users")
+}
+
+// ============================================
+// GESTION DU MENU
+// ============================================
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  icon        String?   // Emoji ou texte
+  image       String?   // URL image uploadée
+  displayOrder Int      @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  products    Product[]
+
+  @@map("categories")
+}
+
+enum ProductType {
+  FOOD
+  DRINK
+  DESSERT
+  SIDE
+}
+
+model Product {
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  cost         Decimal?    @db.Decimal(10, 2) // Coût de revient
+  image        String?
+  type         ProductType @default(FOOD)
+  isAvailable  Boolean     @default(true)
+  isActive     Boolean     @default(true)
+  preparationTime Int?     // Temps de préparation en minutes
+  displayOrder Int         @default(0)
+  categoryId   String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  category     Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  options      ProductOption[]
+  recipes      Recipe[]
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+enum OptionType {
+  SUPPLEMENT  // Supplément (ex: fromage, sauce)
+  CHOICE      // Choix (ex: cuisson, taille)
+  REMOVAL     // Retrait (ex: sans oignon)
+}
+
+model Option {
+  id          String     @id @default(cuid())
+  name        String
+  type        OptionType
+  price       Decimal    @db.Decimal(10, 2) @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  products    ProductOption[]
+  orderItemOptions OrderItemOption[]
+
+  @@map("options")
+}
+
+// Table de liaison Produit <-> Options
+model ProductOption {
+  id        String   @id @default(cuid())
+  productId String
+  optionId  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  option    Option  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, optionId])
+  @@map("product_options")
+}
+
+// ============================================
+// GESTION DES STOCKS ET INGRÉDIENTS
+// ============================================
+
+enum IngredientUnit {
+  GRAM
+  KILOGRAM
+  LITER
+  MILLILITER
+  PIECE
+  UNIT
+}
+
+model Ingredient {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  description   String?
+  unit          IngredientUnit
+  currentStock  Decimal        @db.Decimal(10, 3) @default(0)
+  minStock      Decimal        @db.Decimal(10, 3) @default(0) // Seuil d'alerte
+  unitCost      Decimal        @db.Decimal(10, 2) // Coût par unité
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  recipes       Recipe[]
+  stockMovements StockMovement[]
+
+  @@map("ingredients")
+}
+
+// Recettes : lien entre Produits et Ingrédients
+model Recipe {
+  id           String     @id @default(cuid())
+  productId    String
+  ingredientId String
+  quantity     Decimal    @db.Decimal(10, 3) // Quantité d'ingrédient nécessaire
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("recipes")
+}
+
+enum StockMovementType {
+  PURCHASE    // Achat
+  SALE        // Vente (déstockage automatique)
+  ADJUSTMENT  // Ajustement manuel
+  WASTE       // Perte/gaspillage
+  RETURN      // Retour
+}
+
+model StockMovement {
+  id           String            @id @default(cuid())
+  ingredientId String
+  type         StockMovementType
+  quantity     Decimal           @db.Decimal(10, 3) // Positif pour entrée, négatif pour sortie
+  reason       String?
+  reference    String?           // Référence bon de commande, facture, etc.
+  createdAt    DateTime          @default(now())
+
+  // Relations
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@map("stock_movements")
+}
+
+// ============================================
+// GESTION DES COMMANDES
+// ============================================
+
+enum OrderType {
+  DINE_IN   // Sur place
+  TAKEAWAY  // À emporter
+  DELIVERY  // Livraison
+}
+
+enum OrderStatus {
+  PENDING     // En attente
+  PREPARING   // En préparation
+  READY       // Prêt
+  DELIVERED   // Livré
+  CANCELLED   // Annulé
+}
+
+model Table {
+  id        String   @id @default(cuid())
+  number    Int      @unique
+  capacity  Int      @default(4)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders    Order[]
+
+  @@map("tables")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique // Numéro de commande lisible
+  type          OrderType   @default(DINE_IN)
+  status        OrderStatus @default(PENDING)
+  tableId       String?
+  customerName  String?
+  customerPhone String?
+  notes         String?
+  subtotal      Decimal     @db.Decimal(10, 2) // Sous-total avant réductions
+  discount      Decimal     @db.Decimal(10, 2) @default(0)
+  tax           Decimal     @db.Decimal(10, 2) @default(0)
+  total         Decimal     @db.Decimal(10, 2) // Total final
+  userId        String      // Utilisateur qui a créé la commande
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  table         Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2) // Prix unitaire au moment de la commande
+  total     Decimal  @db.Decimal(10, 2) // Prix total (unitPrice * quantity + options)
+  notes     String?  // Notes spéciales pour cet item
+  createdAt DateTime @default(now())
+
+  // Relations
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+  options   OrderItemOption[]
+
+  @@map("order_items")
+}
+
+// Options sélectionnées pour un item de commande
+model OrderItemOption {
+  id          String   @id @default(cuid())
+  orderItemId String
+  optionId    String
+  price       Decimal  @db.Decimal(10, 2) // Prix de l'option au moment de la commande
+  createdAt   DateTime @default(now())
+
+  // Relations
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  option      Option    @relation(fields: [optionId], references: [id])
+
+  @@map("order_item_options")
+}
+
+// ============================================
+// GESTION DES PAIEMENTS
+// ============================================
+
+enum PaymentMethod {
+  CASH      // Espèces
+  TMONEY    // TMoney (Togo)
+  FLOOZ     // Flooz (Togo)
+  CARD      // Carte bancaire
+  MOBILE    // Paiement mobile générique
+  OTHER     // Autre
+}
+
+enum PaymentStatus {
+  PENDING   // En attente
+  COMPLETED // Complété
+  FAILED    // Échoué
+  REFUNDED  // Remboursé
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  method        PaymentMethod
+  status        PaymentStatus @default(COMPLETED)
+  amount        Decimal       @db.Decimal(10, 2)
+  reference     String?       // Référence de transaction
+  userId        String        // Utilisateur qui a enregistré le paiement
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+// ============================================
+// CLÔTURE DE JOURNÉE
+// ============================================
+
+model DailyClosure {
+  id                String   @id @default(cuid())
+  date              DateTime // Date de la clôture (début de journée)
+  closedAt          DateTime @default(now()) // Moment de la clôture
+  closedBy          String   // Utilisateur qui a fait la clôture
+
+  // Statistiques de la journée
+  totalOrders       Int
+  completedOrders   Int
+  cancelledOrders   Int
+  totalRevenue      Decimal  @db.Decimal(12, 2)
+  totalCash         Decimal  @db.Decimal(12, 2)
+  totalTmoney       Decimal  @db.Decimal(12, 2)
+  totalFlooz        Decimal  @db.Decimal(12, 2)
+  totalCard         Decimal  @db.Decimal(12, 2)
+  totalMobile       Decimal  @db.Decimal(12, 2)
+  totalOther        Decimal  @db.Decimal(12, 2)
+
+  // Rapport détaillé (JSON)
+  detailedReport    String   @db.Text // JSON avec détails par utilisateur, produits vendus, etc.
+
+  notes             String?  @db.Text // Notes de clôture
+
+  // Relations
+  user              User     @relation(fields: [closedBy], references: [id])
+
+  @@unique([date, closedBy]) // Une seule clôture par jour et par utilisateur
+  @@map("daily_closures")
+}
+
+// ============================================
+// LOGS D'ACTIVITÉ
+// ============================================
+
+enum ActivityType {
+  USER_LOGIN
+  USER_LOGOUT
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DELETED
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DELETED
+  ORDER_CREATED
+  ORDER_CANCELLED
+  PAYMENT_CREATED
+  STOCK_ADJUSTED
+  DAILY_CLOSURE
+  SYSTEM_ERROR
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  userId      String?      // Utilisateur qui a effectué l'action (null pour actions système)
+  targetId    String?      // ID de l'entité concernée (orderId, productId, etc.)
+  description String       @db.Text // Description détaillée
+  metadata    String?      @db.Text // Données supplémentaires en JSON
+  ipAddress   String?      // Adresse IP (optionnel)
+  createdAt   DateTime     @default(now())
+
+  // Relations
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ============================================
+// PARAMÈTRES DE L'APPLICATION
+// ============================================
+
+model AppSettings {
+  id              String   @id @default(cuid())
+
+  // Branding de l'application
+  appName         String   @default("Gestion Fast-Food")
+  appIcon         String   @default("🍔")
+  slogan          String?
+  logoUrl         String?  // URL ou chemin vers le logo personnalisé
+
+  // Couleurs et thème
+  primaryColor    String   @default("#ef4444") // Couleur principale (hex)
+  secondaryColor  String?  // Couleur secondaire (hex)
+
+  // Informations de l'entreprise
+  companyName     String?
+  companyEmail    String?
+  companyPhone    String?
+  companyAddress  String?
+
+  // Paramètres monétaires
+  currency        String   @default("FCFA")
+  currencySymbol  String   @default("FCFA")
+  taxRate         Decimal  @db.Decimal(5, 2) @default(0) // Taux de TVA en pourcentage
+
+  // Paramètres de facturation
+  receiptHeader   String?  @db.Text // En-tête personnalisé pour les reçus
+  receiptFooter   String?  @db.Text // Pied de page personnalisé pour les reçus
+
+  // État
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("app_settings")
+}
