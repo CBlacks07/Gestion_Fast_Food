@@ -3,6 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
+# Lockfile non versionné : généré sous Windows, ne référence pas les binaires
+# natifs optionnels (Rollup...) nécessaires sur la machine de build Linux de
+# Vercel (npm/cli#4828). Chaque environnement régénère le sien.
+package-lock.json
+
 # Testing
 coverage/
 
