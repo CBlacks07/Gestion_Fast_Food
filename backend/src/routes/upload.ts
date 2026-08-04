@@ -1,121 +1,101 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 
-export default async function uploadRoutes(app: FastifyInstance) {
-// S'assurer que le dossier uploads existe
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Vercel Blob est utilisé dès qu'un token est présent. En local (pas de token),
+// on retombe sur l'écriture disque historique dans backend/uploads/.
+const useBlobStorage = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+
 const uploadsDir = join(process.cwd(), 'uploads');
-await mkdir(uploadsDir, { recursive: true });
 
-// POST /api/upload/image - Upload générique d'image (catégories, produits...)
-app.post('/image', async (request, reply) => {
-try {
-const data = await request.file();
+/**
+ * Enregistre le fichier et renvoie son URL publique.
+ * - Vercel Blob -> URL absolue (https://....public.blob.vercel-storage.com/...)
+ * - disque local -> chemin relatif /uploads/... servi par @fastify/static
+ */
+async function storeFile(
+  filename: string,
+  buffer: Buffer,
+  mimetype: string
+): Promise<string> {
+  if (useBlobStorage) {
+    // Import dynamique : le paquet n'est nécessaire que sur Vercel, et cela
+    // évite de le charger au démarrage en local.
+    const { put } = await import('@vercel/blob');
+    const blob = await put(filename, buffer, {
+      access: 'public',
+      contentType: mimetype,
+    });
+    return blob.url;
+  }
 
-if (!data) {
-return reply.status(400).send({
-success: false,
-error: 'Aucun fichier fourni',
-});
+  await mkdir(uploadsDir, { recursive: true });
+  await writeFile(join(uploadsDir, filename), buffer);
+  return `/uploads/${filename}`;
 }
 
-const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-if (!allowedTypes.includes(data.mimetype)) {
-return reply.status(400).send({
-success: false,
-error: 'Format de fichier non supporté. Utilisez JPG, PNG, GIF ou WEBP',
-});
+/**
+ * Valide puis enregistre le fichier de la requête multipart.
+ * `prefix` sert à distinguer les logos des images génériques.
+ */
+async function handleUpload(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  prefix: 'img' | 'logo'
+) {
+  try {
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Aucun fichier fourni',
+      });
+    }
+
+    if (!ALLOWED_TYPES.includes(data.mimetype)) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Format de fichier non supporté. Utilisez JPG, PNG, GIF ou WEBP',
+      });
+    }
+
+    const buffer = await data.toBuffer();
+    if (buffer.length > MAX_SIZE) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Le fichier est trop volumineux (max 5MB)',
+      });
+    }
+
+    const extension = data.filename.split('.').pop();
+    const filename = `${prefix}-${randomUUID()}.${extension}`;
+    const url = await storeFile(filename, buffer, data.mimetype);
+
+    return reply.send({
+      success: true,
+      data: {
+        url,
+        filename,
+      },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      error: "Erreur lors de l'upload du fichier",
+    });
+  }
 }
 
-const maxSize = 5 * 1024 * 1024;
-const buffer = await data.toBuffer();
-if (buffer.length > maxSize) {
-return reply.status(400).send({
-success: false,
-error: 'Le fichier est trop volumineux (max 5MB)',
-});
-}
+export default async function uploadRoutes(app: FastifyInstance) {
+  // POST /api/upload/image - Upload générique d'image (catégories, produits...)
+  app.post('/image', (request, reply) => handleUpload(request, reply, 'img'));
 
-const extension = data.filename.split('.').pop();
-const filename = `img-${randomUUID()}.${extension}`;
-const filepath = join(uploadsDir, filename);
-
-await writeFile(filepath, buffer);
-
-const fileUrl = `/uploads/${filename}`;
-
-return reply.send({
-success: true,
-data: {
-url: fileUrl,
-filename,
-},
-});
-} catch (error) {
-request.log.error(error);
-return reply.status(500).send({
-success: false,
-error: 'Erreur lors de l\'upload du fichier',
-});
-}
-});
-
-// POST /api/upload/logo - Upload du logo
-app.post('/logo', async (request, reply) => {
-try {
-const data = await request.file();
-
-if (!data) {
-return reply.status(400).send({
-success: false,
-error: 'Aucun fichier fourni',
-});
-}
-
-// Vérifier le type de fichier (images uniquement)
-const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-if (!allowedTypes.includes(data.mimetype)) {
-return reply.status(400).send({
-success: false,
-error: 'Format de fichier non supporté. Utilisez JPG, PNG, GIF ou WEBP',
-});
-}
-
-// Vérifier la taille (max 5MB)
-const maxSize = 5 * 1024 * 1024; // 5MB
-const buffer = await data.toBuffer();
-if (buffer.length > maxSize) {
-return reply.status(400).send({
-success: false,
-error: 'Le fichier est trop volumineux (max 5MB)',
-});
-}
-
-// Générer un nom unique pour le fichier
-const extension = data.filename.split('.').pop();
-const filename = `logo-${randomUUID()}.${extension}`;
-const filepath = join(uploadsDir, filename);
-
-// Sauvegarder le fichier
-await writeFile(filepath, buffer);
-
-// Retourner l'URL du fichier
-const fileUrl = `/uploads/${filename}`;
-
-return reply.send({
-success: true,
-data: {
-url: fileUrl,
-filename,
-},
-});
-} catch (error) {
-request.log.error(error);
-return reply.status(500).send({
-success: false,
-error: 'Erreur lors de l\'upload du fichier',
-});
-}
-});
+  // POST /api/upload/logo - Upload du logo
+  app.post('/logo', (request, reply) => handleUpload(request, reply, 'logo'));
 }

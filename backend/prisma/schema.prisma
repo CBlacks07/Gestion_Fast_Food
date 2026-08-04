@@ -7,7 +7,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Connexion applicative. Sur Neon : l'URL *poolée* (hôte en `-pooler`),
+  // adaptée au serverless où chaque instance ouvre sa propre connexion.
   url      = env("DATABASE_URL")
+  // Connexion directe (sans pooler), utilisée par `prisma db push` / `migrate`
+  // qui ne fonctionnent pas à travers PgBouncer. En local, mettre la même
+  // valeur que DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================

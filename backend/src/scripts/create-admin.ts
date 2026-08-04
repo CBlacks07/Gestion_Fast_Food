@@ -3,7 +3,7 @@
 * Utilisé lors du premier démarrage de l'application
 */
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
 
 const SALT_ROUNDS = 10;

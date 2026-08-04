@@ -11,7 +11,13 @@ Ingredient,
 StockMovement,
 } from '../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3010';
+// En production (déploiement Vercel mono-projet), l'API est servie par le même
+// domaine que le front : on utilise des URL relatives, donc pas de CORS.
+// En développement, on tape directement le serveur Fastify local.
+// VITE_API_URL reste prioritaire pour les cas particuliers (build Tauri,
+// backend hébergé ailleurs...).
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://127.0.0.1:3010');
 
 const api = axios.create({
 baseURL: API_BASE_URL,
@@ -412,8 +418,10 @@ return response.data;
 };
 
 // Health check
+// `/api/health` (et non `/health`) : sur Vercel, seules les routes sous /api/
+// sont routées vers la fonction serverless.
 export const healthCheck = async () => {
-const response = await api.get('/health');
+const response = await api.get('/api/health');
 return response.data;
 };
 

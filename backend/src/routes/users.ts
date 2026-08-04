@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
 import { logActivity } from '../utils/activityLogger';
 import { requireAuth, requireRole } from '../middleware/auth';

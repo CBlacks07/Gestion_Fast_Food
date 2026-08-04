@@ -5,7 +5,7 @@
 * Usage: npx tsx src/scripts/hash-passwords.ts
 */
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
 
 const SALT_ROUNDS = 10;
