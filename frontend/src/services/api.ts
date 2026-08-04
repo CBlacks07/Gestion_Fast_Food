@@ -73,6 +73,20 @@ return Promise.reject(error);
 );
 
 // Auth API
+// Restaurants API (branding public, avant connexion)
+export const restaurantsApi = {
+getBrandingByCode: async (code: string) => {
+const response = await api.get<ApiResponse<{
+appName: string;
+appIcon: string;
+logoUrl: string | null;
+primaryColor: string;
+slogan: string | null;
+}>>('/api/restaurants/branding', { params: { code } });
+return response.data;
+},
+};
+
 export const authApi = {
 login: async (code: string, username: string, password: string) => {
 const response = await api.post<ApiResponse<any>>('/api/auth/login', {

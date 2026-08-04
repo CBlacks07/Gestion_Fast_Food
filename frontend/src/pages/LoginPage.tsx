@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, User, Lock, Eye, EyeOff, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
-import { authApi, API_BASE_URL } from '../services/api';
+import { authApi, restaurantsApi, API_BASE_URL } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { useAppSettingsStore } from '../store/appSettingsStore';
 
 const LAST_RESTAURANT_CODE_KEY = 'last-restaurant-code';
+
+interface Branding {
+  appName: string;
+  appIcon: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  slogan: string | null;
+}
 
 export default function LoginPage() {
   const [code, setCode] = useState(() => localStorage.getItem(LAST_RESTAURANT_CODE_KEY) || '');
@@ -13,9 +20,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [branding, setBranding] = useState<Branding | null>(null);
 
   const login = useAuthStore((state) => state.login);
-  const settings = useAppSettingsStore((state) => state.settings);
+
+  // Récupère le branding public (nom/logo/couleur) dès qu'un code établissement
+  // valide est saisi, avant même la connexion. Debounce pour éviter un appel
+  // à chaque frappe ; silencieux en cas d'échec (code pas encore complet/valide).
+  useEffect(() => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setBranding(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const response = await restaurantsApi.getBrandingByCode(trimmed);
+        setBranding(response.success && response.data ? response.data : null);
+      } catch {
+        setBranding(null);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [code]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +83,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}
+      style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        '--color-primary': branding?.primaryColor || '#e05252',
+      } as React.CSSProperties}
     >
       {/* Lueur subtile de la couleur du thème — toujours élégant peu importe la couleur */}
       <div
@@ -92,28 +122,28 @@ export default function LoginPage() {
           {/* Logo / Branding */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              {settings?.logoUrl ? (
+              {branding?.logoUrl ? (
                 <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-gray-100 shadow-lg">
                   <img
-                    src={settings.logoUrl.startsWith('http') ? settings.logoUrl : `${API_BASE_URL}${settings.logoUrl}`}
-                    alt={settings.appName || 'Logo'}
+                    src={branding.logoUrl.startsWith('http') ? branding.logoUrl : `${API_BASE_URL}${branding.logoUrl}`}
+                    alt={branding.appName || 'Logo'}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 </div>
               ) : (
                 <div className="w-20 h-20 rounded-full border-4 border-gray-100 flex items-center justify-center text-4xl shadow-lg bg-gray-50">
-                  {settings?.appIcon || '🍽️'}
+                  {branding?.appIcon || '🍽️'}
                 </div>
               )}
             </div>
 
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-              {settings?.appName || 'Gestion Fast-Food'}
+              {branding?.appName || 'Gestion Fast-Food'}
             </h1>
-            {settings?.slogan && (
+            {branding?.slogan && (
               <p className="text-sm font-medium mt-1" style={{ color: 'var(--color-primary, #e05252)' }}>
-                {settings.slogan}
+                {branding.slogan}
               </p>
             )}
             <p className="text-xs text-gray-400 mt-1.5">Connectez-vous pour continuer</p>

@@ -19,6 +19,7 @@ import usersRoutes from './routes/users';
 import closuresRoutes from './routes/closures';
 import appSettingsRoutes from './routes/app-settings';
 import uploadRoutes from './routes/upload';
+import restaurantsRoutes from './routes/restaurants';
 import { dbHealthCheckMiddleware, checkDbConnection } from './middleware/dbHealthCheck';
 
 dotenv.config();
@@ -144,6 +145,7 @@ export function buildApp(): FastifyInstance {
   const PUBLIC_ENDPOINTS: Array<{ method: string; path: string }> = [
     { method: 'POST', path: '/api/auth/login' },
     { method: 'GET', path: '/api/health' }, // sonde de disponibilité
+    { method: 'GET', path: '/api/restaurants/branding' }, // logo/nom affichés sur l'écran de login
   ];
 
   app.addHook('onRequest', async (request, reply) => {
@@ -179,6 +181,7 @@ export function buildApp(): FastifyInstance {
   app.register(closuresRoutes, { prefix: '/api/closures' });
   app.register(appSettingsRoutes, { prefix: '/api/app-settings' });
   app.register(uploadRoutes, { prefix: '/api/upload' });
+  app.register(restaurantsRoutes, { prefix: '/api/restaurants' });
 
   return app;
 }
