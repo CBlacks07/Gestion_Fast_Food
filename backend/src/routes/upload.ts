@@ -10,14 +10,17 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 // on retombe sur l'écriture disque historique dans backend/uploads/.
 const useBlobStorage = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
-const uploadsDir = join(process.cwd(), 'uploads');
+const uploadsRoot = join(process.cwd(), 'uploads');
 
 /**
  * Enregistre le fichier et renvoie son URL publique.
+ * Les fichiers sont namespacés par restaurantId pour éviter qu'un restaurant
+ * n'écrase/expose les fichiers d'un autre.
  * - Vercel Blob -> URL absolue (https://....public.blob.vercel-storage.com/...)
- * - disque local -> chemin relatif /uploads/... servi par @fastify/static
+ * - disque local -> chemin relatif /uploads/<restaurantId>/... servi par @fastify/static
  */
 async function storeFile(
+  restaurantId: string,
   filename: string,
   buffer: Buffer,
   mimetype: string
@@ -26,16 +29,17 @@ async function storeFile(
     // Import dynamique : le paquet n'est nécessaire que sur Vercel, et cela
     // évite de le charger au démarrage en local.
     const { put } = await import('@vercel/blob');
-    const blob = await put(filename, buffer, {
+    const blob = await put(`${restaurantId}/${filename}`, buffer, {
       access: 'public',
       contentType: mimetype,
     });
     return blob.url;
   }
 
-  await mkdir(uploadsDir, { recursive: true });
-  await writeFile(join(uploadsDir, filename), buffer);
-  return `/uploads/${filename}`;
+  const restaurantDir = join(uploadsRoot, restaurantId);
+  await mkdir(restaurantDir, { recursive: true });
+  await writeFile(join(restaurantDir, filename), buffer);
+  return `/uploads/${restaurantId}/${filename}`;
 }
 
 /**
@@ -48,6 +52,7 @@ async function handleUpload(
   prefix: 'img' | 'logo'
 ) {
   try {
+    const restaurantId = request.user!.restaurantId;
     const data = await request.file();
 
     if (!data) {
@@ -74,7 +79,7 @@ async function handleUpload(
 
     const extension = data.filename.split('.').pop();
     const filename = `${prefix}-${randomUUID()}.${extension}`;
-    const url = await storeFile(filename, buffer, data.mimetype);
+    const url = await storeFile(restaurantId, filename, buffer, data.mimetype);
 
     return reply.send({
       success: true,

@@ -74,8 +74,9 @@ return Promise.reject(error);
 
 // Auth API
 export const authApi = {
-login: async (username: string, password: string) => {
+login: async (code: string, username: string, password: string) => {
 const response = await api.post<ApiResponse<any>>('/api/auth/login', {
+code,
 username,
 password,
 });

@@ -2,27 +2,28 @@ import { FastifyInstance } from 'fastify';
 import prisma from '../utils/prisma';
 import { logActivity } from '../utils/activityLogger';
 
-export default async function appSettingsRoutes(app: FastifyInstance) {
-// GET /api/app-settings - Récupère les paramètres actifs de l'application
-app.get('/', async (request, reply) => {
-try {
-// Récupérer les paramètres actifs (ou créer par défaut s'ils n'existent pas)
-let settings = await prisma.appSettings.findFirst({
-where: { isActive: true },
-});
-
-// Si aucun paramètre actif n'existe, créer les paramètres par défaut
-if (!settings) {
-settings = await prisma.appSettings.create({
-data: {
+const DEFAULT_SETTINGS = {
 appName: 'Gestion Fast-Food',
 appIcon: '',
 primaryColor: '#ef4444',
 currency: 'FCFA',
 currencySymbol: 'FCFA',
 taxRate: 0,
-isActive: true,
-},
+};
+
+export default async function appSettingsRoutes(app: FastifyInstance) {
+// GET /api/app-settings - Récupère les paramètres du restaurant (les crée s'ils n'existent pas)
+app.get('/', async (request, reply) => {
+try {
+const restaurantId = request.user!.restaurantId;
+
+let settings = await prisma.appSettings.findUnique({
+where: { restaurantId },
+});
+
+if (!settings) {
+settings = await prisma.appSettings.create({
+data: { ...DEFAULT_SETTINGS, restaurantId },
 });
 }
 
@@ -43,9 +44,10 @@ error: 'Erreur lors de la récupération des paramètres',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const settings = await prisma.appSettings.findUnique({
-where: { id },
+const settings = await prisma.appSettings.findFirst({
+where: { id, restaurantId },
 });
 
 if (!settings) {
@@ -68,9 +70,10 @@ error: 'Erreur lors de la récupération des paramètres',
 }
 });
 
-// PUT /api/app-settings - Mettre à jour les paramètres actifs
+// PUT /api/app-settings - Mettre à jour les paramètres du restaurant
 app.put('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const {
 appName,
 appIcon,
@@ -107,38 +110,28 @@ receiptFooter?: string;
 userId?: string;
 };
 
-// Récupérer les paramètres actifs actuels
-let settings = await prisma.appSettings.findFirst({
-where: { isActive: true },
-});
-
-if (!settings) {
-// Créer de nouveaux paramètres s'ils n'existent pas
-settings = await prisma.appSettings.create({
-data: {
-appName: appName || 'Gestion Fast-Food',
-appIcon: appIcon || '',
+const settings = await prisma.appSettings.upsert({
+where: { restaurantId },
+create: {
+...DEFAULT_SETTINGS,
+appName: appName || DEFAULT_SETTINGS.appName,
+appIcon: appIcon || DEFAULT_SETTINGS.appIcon,
 slogan,
 logoUrl,
-primaryColor: primaryColor || '#ef4444',
+primaryColor: primaryColor || DEFAULT_SETTINGS.primaryColor,
 secondaryColor,
 companyName,
 companyEmail,
 companyPhone,
 companyAddress,
-currency: currency || 'FCFA',
-currencySymbol: currencySymbol || 'FCFA',
-taxRate: taxRate || 0,
+currency: currency || DEFAULT_SETTINGS.currency,
+currencySymbol: currencySymbol || DEFAULT_SETTINGS.currencySymbol,
+taxRate: taxRate || DEFAULT_SETTINGS.taxRate,
 receiptHeader,
 receiptFooter,
-isActive: true,
+restaurantId,
 },
-});
-} else {
-// Mettre à jour les paramètres existants
-settings = await prisma.appSettings.update({
-where: { id: settings.id },
-data: {
+update: {
 ...(appName !== undefined && { appName }),
 ...(appIcon !== undefined && { appIcon }),
 ...(slogan !== undefined && { slogan }),
@@ -154,15 +147,14 @@ data: {
 ...(taxRate !== undefined && { taxRate }),
 ...(receiptHeader !== undefined && { receiptHeader }),
 ...(receiptFooter !== undefined && { receiptFooter }),
-updatedAt: new Date(),
 },
 });
-}
 
 // Log activity
 if (userId) {
 await logActivity({
 type: 'SYSTEM_ERROR', // Utiliser un type existant ou créer un nouveau
+restaurantId,
 userId,
 targetId: settings.id,
 description: `Paramètres de l'application modifiés`,
@@ -187,31 +179,20 @@ error: 'Erreur lors de la mise à jour des paramètres',
 // POST /api/app-settings/reset - Réinitialiser aux paramètres par défaut
 app.post('/reset', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { userId } = request.body as { userId?: string };
 
-// Désactiver tous les paramètres existants
-await prisma.appSettings.updateMany({
-where: { isActive: true },
-data: { isActive: false },
-});
-
-// Créer de nouveaux paramètres par défaut
-const settings = await prisma.appSettings.create({
-data: {
-appName: 'Gestion Fast-Food',
-appIcon: '',
-primaryColor: '#ef4444',
-currency: 'FCFA',
-currencySymbol: 'FCFA',
-taxRate: 0,
-isActive: true,
-},
+const settings = await prisma.appSettings.upsert({
+where: { restaurantId },
+create: { ...DEFAULT_SETTINGS, restaurantId },
+update: { ...DEFAULT_SETTINGS },
 });
 
 // Log activity
 if (userId) {
 await logActivity({
 type: 'SYSTEM_ERROR',
+restaurantId,
 userId,
 targetId: settings.id,
 description: `Paramètres de l'application réinitialisés aux valeurs par défaut`,

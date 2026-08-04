@@ -6,9 +6,10 @@ export default async function ingredientsRoutes(app: FastifyInstance) {
 // GET /api/ingredients - Liste tous les ingrédients
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { lowStock } = request.query as { lowStock?: string };
 
-const where: any = { isActive: true };
+const where: any = { isActive: true, restaurantId };
 
 const ingredients = await prisma.ingredient.findMany({
 where,
@@ -43,9 +44,10 @@ error: 'Erreur lors de la récupération des ingrédients',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const ingredient = await prisma.ingredient.findUnique({
-where: { id },
+const ingredient = await prisma.ingredient.findFirst({
+where: { id, restaurantId },
 include: {
 stockMovements: {
 orderBy: { createdAt: 'desc' },
@@ -82,6 +84,7 @@ error: 'Erreur lors de la récupération de l\'ingrédient',
 // POST /api/ingredients - Créer un nouvel ingrédient
 app.post('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { name, description, unit, currentStock, minStock, unitCost } = request.body as {
 name: string;
 description?: string;
@@ -99,6 +102,7 @@ unit: unit as any,
 currentStock,
 minStock,
 unitCost,
+restaurantId,
 },
 });
 
@@ -119,7 +123,16 @@ error: 'Erreur lors de la création de l\'ingrédient',
 app.put('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { name, description, unit, minStock, unitCost, isActive } = request.body as any;
+
+const existing = await prisma.ingredient.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Ingrédient non trouvé',
+});
+}
 
 const ingredient = await prisma.ingredient.update({
 where: { id },
@@ -150,6 +163,7 @@ error: 'Erreur lors de la mise à jour de l\'ingrédient',
 app.post('/:id/stock', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { type, quantity, reason, reference, userId } = request.body as {
 type: string;
 quantity: number;
@@ -158,9 +172,9 @@ reference?: string;
 userId?: string;
 };
 
-// Récupérer l'ingrédient actuel
-const ingredient = await prisma.ingredient.findUnique({
-where: { id },
+// Récupérer l'ingrédient actuel (scopé au restaurant)
+const ingredient = await prisma.ingredient.findFirst({
+where: { id, restaurantId },
 });
 
 if (!ingredient) {
@@ -203,6 +217,7 @@ currentStock: newStock,
 if (userId) {
 await logActivity({
 type: 'STOCK_ADJUSTED',
+restaurantId,
 userId,
 targetId: id,
 description: `Stock ajusté: ${ingredient.name} (${quantity > 0 ? '+' : ''}${quantity} ${ingredient.unit})`,
@@ -229,9 +244,12 @@ error: 'Erreur lors de la mise à jour du stock',
 // GET /api/ingredients/alerts/low-stock - Alertes de stock bas
 app.get('/alerts/low-stock', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
+
 const ingredients = await prisma.ingredient.findMany({
 where: {
 isActive: true,
+restaurantId,
 },
 });
 

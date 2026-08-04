@@ -10,10 +10,11 @@ export default async function usersRoutes(app: FastifyInstance) {
 // GET /api/users - Liste tous les utilisateurs (ADMIN uniquement)
 app.get('/', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { includeInactive } = request.query as { includeInactive?: string };
 
 const users = await prisma.user.findMany({
-where: includeInactive === 'true' ? {} : { isActive: true },
+where: includeInactive === 'true' ? { restaurantId } : { isActive: true, restaurantId },
 select: {
 id: true,
 email: true,
@@ -43,6 +44,7 @@ error: 'Erreur lors de la récupération des utilisateurs',
 // POST /api/users - Créer un nouvel utilisateur (ADMIN uniquement)
 app.post('/', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { email, username, password, firstName, lastName, role } = request.body as {
 email: string;
 username: string;
@@ -61,9 +63,10 @@ error: `Rôle invalide. Rôles autorisés: ${validRoles.join(', ')}`,
 });
 }
 
-// Vérifier si l'email ou le username existe déjà
+// Vérifier si l'email ou le username existe déjà dans ce restaurant
 const existingUser = await prisma.user.findFirst({
 where: {
+restaurantId,
 OR: [{ email }, { username }],
 },
 });
@@ -86,6 +89,7 @@ password: hashedPassword,
 firstName,
 lastName,
 role: role as any,
+restaurantId,
 },
 select: {
 id: true,
@@ -116,6 +120,7 @@ error: 'Erreur lors de la création de l\'utilisateur',
 app.put('/:id', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { email, username, password, firstName, lastName, role, isActive } = request.body as {
 email?: string;
 username?: string;
@@ -125,6 +130,14 @@ lastName?: string;
 role?: string;
 isActive?: boolean;
 };
+
+const existing = await prisma.user.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Utilisateur non trouvé',
+});
+}
 
 // Validation du rôle si fourni
 if (role) {
@@ -137,12 +150,13 @@ error: `Rôle invalide. Rôles autorisés: ${validRoles.join(', ')}`,
 }
 }
 
-// Vérifier si l'email ou le username existe déjà (pour un autre utilisateur)
+// Vérifier si l'email ou le username existe déjà (pour un autre utilisateur du même restaurant)
 if (email || username) {
 const existingUser = await prisma.user.findFirst({
 where: {
 AND: [
 { id: { not: id } },
+{ restaurantId },
 {
 OR: [
 email ? { email } : {},
@@ -205,12 +219,13 @@ error: 'Erreur lors de la mise à jour de l\'utilisateur',
 app.delete('/:id', { preHandler: requireRole('ADMIN') }, async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 // SÉCURITÉ: Utiliser le JWT au lieu du body pour éviter l'escalade de privilèges
 const currentUserId = request.user!.userId;
 
-// Récupérer l'utilisateur à supprimer
-const targetUser = await prisma.user.findUnique({
-where: { id },
+// Récupérer l'utilisateur à supprimer (scopé au restaurant)
+const targetUser = await prisma.user.findFirst({
+where: { id, restaurantId },
 select: { id: true, role: true, username: true },
 });
 
@@ -254,6 +269,7 @@ isActive: true,
 // Logger l'activité
 await logActivity({
 type: 'USER_DELETED',
+restaurantId,
 userId: currentUserId,
 targetId: id,
 description: `Utilisateur désactivé: ${targetUser.username}`,
@@ -276,6 +292,7 @@ error: 'Erreur lors de la suppression de l\'utilisateur',
 app.get('/:id/stats', { preHandler: requireAuth }, async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { date } = request.query as { date?: string };
 
 // Déterminer la plage de dates (par défaut aujourd'hui)
@@ -285,9 +302,9 @@ startOfDay.setHours(0, 0, 0, 0);
 const endOfDay = new Date(targetDate);
 endOfDay.setHours(23, 59, 59, 999);
 
-// Récupérer l'utilisateur
-const user = await prisma.user.findUnique({
-where: { id },
+// Récupérer l'utilisateur (scopé au restaurant)
+const user = await prisma.user.findFirst({
+where: { id, restaurantId },
 select: {
 id: true,
 username: true,
@@ -322,6 +339,7 @@ error: 'Vous n\'avez pas la permission de voir ces statistiques',
 const orders = await prisma.order.findMany({
 where: {
 userId: id,
+restaurantId,
 createdAt: {
 gte: startOfDay,
 lte: endOfDay,
@@ -347,6 +365,7 @@ orderBy: { createdAt: 'desc' },
 const payments = await prisma.payment.findMany({
 where: {
 userId: id,
+restaurantId,
 createdAt: {
 gte: startOfDay,
 lte: endOfDay,
@@ -451,6 +470,7 @@ error: 'Erreur lors de la récupération des statistiques',
 // GET /api/users/stats/all - Statistiques de tous les utilisateurs pour une date donnée (ADMIN, MANAGER)
 app.get('/stats/all', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { date } = request.query as { date?: string };
 
 // Déterminer la plage de dates (par défaut aujourd'hui)
@@ -460,9 +480,9 @@ startOfDay.setHours(0, 0, 0, 0);
 const endOfDay = new Date(targetDate);
 endOfDay.setHours(23, 59, 59, 999);
 
-// Récupérer tous les utilisateurs actifs
+// Récupérer tous les utilisateurs actifs du restaurant
 const users = await prisma.user.findMany({
-where: { isActive: true },
+where: { isActive: true, restaurantId },
 select: {
 id: true,
 username: true,
@@ -479,6 +499,7 @@ users.map(async (user) => {
 const orders = await prisma.order.findMany({
 where: {
 userId: user.id,
+restaurantId,
 createdAt: {
 gte: startOfDay,
 lte: endOfDay,
@@ -490,6 +511,7 @@ lte: endOfDay,
 const payments = await prisma.payment.findMany({
 where: {
 userId: user.id,
+restaurantId,
 status: 'COMPLETED',
 createdAt: {
 gte: startOfDay,

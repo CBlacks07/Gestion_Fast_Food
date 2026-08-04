@@ -3,6 +3,7 @@ import type { ActivityType } from '@prisma/client';
 
 interface LogActivityParams {
 type: ActivityType;
+restaurantId?: string;
 userId?: string;
 targetId?: string;
 description: string;
@@ -19,6 +20,7 @@ try {
 await prisma.activityLog.create({
 data: {
 type: params.type,
+restaurantId: params.restaurantId || null,
 userId: params.userId || null,
 targetId: params.targetId || null,
 description: params.description,

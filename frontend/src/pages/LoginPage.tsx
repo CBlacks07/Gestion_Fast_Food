@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { User, Lock, Eye, EyeOff, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
+import { Building2, User, Lock, Eye, EyeOff, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import { authApi, API_BASE_URL } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useAppSettingsStore } from '../store/appSettingsStore';
 
+const LAST_RESTAURANT_CODE_KEY = 'last-restaurant-code';
+
 export default function LoginPage() {
+  const [code, setCode] = useState(() => localStorage.getItem(LAST_RESTAURANT_CODE_KEY) || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,14 +21,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!username || !password) {
+    if (!code || !username || !password) {
       setError('Veuillez remplir tous les champs');
       return;
     }
 
     try {
       setIsLoading(true);
-      const response = await authApi.login(username, password);
+      const response = await authApi.login(code, username, password);
+      if (response.success) {
+        localStorage.setItem(LAST_RESTAURANT_CODE_KEY, code);
+      }
 
       if (response.success && response.data) {
         login(response.data.user, response.data.token);
@@ -114,6 +120,27 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Code établissement */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                Code établissement
+              </label>
+              <div className="relative">
+                <Building2 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="Ex: CHEZFATOU"
+                  disabled={isLoading}
+                  autoComplete="organization"
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:border-transparent focus:bg-white disabled:opacity-50 transition-all text-sm outline-none uppercase"
+                  style={{ '--tw-ring-color': 'var(--color-primary, #e05252)' } as React.CSSProperties}
+                />
+              </div>
+            </div>
+
             {/* Username */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -128,7 +155,6 @@ export default function LoginPage() {
                   placeholder="Votre identifiant"
                   disabled={isLoading}
                   autoComplete="username"
-                  autoFocus
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:border-transparent focus:bg-white disabled:opacity-50 transition-all text-sm outline-none"
                   style={{ '--tw-ring-color': 'var(--color-primary, #e05252)' } as React.CSSProperties}
                 />

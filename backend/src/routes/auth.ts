@@ -18,22 +18,43 @@ timeWindow: '15 minutes',
 },
 async (request, reply) => {
 try {
-const { username, password } = request.body as {
+const { code, username, password } = request.body as {
+code: string;
 username: string;
 password: string;
 };
 
 // Validation basique
-if (!username || !password) {
+if (!code || !username || !password) {
 return reply.status(400).send({
 success: false,
-error: 'Nom d\'utilisateur et mot de passe requis',
+error: 'Code établissement, nom d\'utilisateur et mot de passe requis',
 });
 }
 
-// Rechercher l'utilisateur
+// Résoudre le restaurant à partir du code établissement
+const restaurant = await prisma.restaurant.findUnique({
+where: { code: code.trim().toUpperCase() },
+});
+
+if (!restaurant || !restaurant.isActive) {
+await logActivity({
+type: 'SYSTEM_ERROR',
+description: `Tentative de connexion avec code établissement invalide: ${code}`,
+ipAddress: request.ip,
+metadata: { code, username },
+});
+
+return reply.status(401).send({
+success: false,
+error: 'Code établissement introuvable',
+});
+}
+
+// Rechercher l'utilisateur, scopé au restaurant résolu
 const user = await prisma.user.findFirst({
 where: {
+restaurantId: restaurant.id,
 OR: [{ username }, { email: username }],
 isActive: true,
 },
@@ -43,6 +64,7 @@ if (!user) {
 // Log tentative de connexion échouée
 await logActivity({
 type: 'SYSTEM_ERROR',
+restaurantId: restaurant.id,
 description: `Tentative de connexion échouée: ${username}`,
 ipAddress: request.ip,
 metadata: { username },
@@ -61,6 +83,7 @@ if (!isPasswordValid) {
 // Log tentative de connexion échouée
 await logActivity({
 type: 'SYSTEM_ERROR',
+restaurantId: restaurant.id,
 userId: user.id,
 description: `Tentative de connexion échouée: ${user.username} (mauvais mot de passe)`,
 ipAddress: request.ip,
@@ -76,6 +99,7 @@ error: 'Nom d\'utilisateur ou mot de passe incorrect',
 // Générer le token JWT
 const token = app.jwt.sign({
 userId: user.id,
+restaurantId: user.restaurantId,
 role: user.role,
 email: user.email,
 });
@@ -86,6 +110,7 @@ const { password: _, ...userWithoutPassword } = user;
 // Log activité de connexion réussie
 await logActivity({
 type: 'USER_LOGIN',
+restaurantId: restaurant.id,
 userId: user.id,
 description: `Connexion réussie: ${user.username}`,
 ipAddress: request.ip,
@@ -112,9 +137,10 @@ error: 'Erreur lors de la connexion',
 app.get('/me', { preHandler: requireAuth }, async (request, reply) => {
 try {
 const userId = request.user!.userId;
+const restaurantId = request.user!.restaurantId;
 
-const user = await prisma.user.findUnique({
-where: { id: userId },
+const user = await prisma.user.findFirst({
+where: { id: userId, restaurantId },
 });
 
 if (!user || !user.isActive) {
@@ -143,10 +169,12 @@ error: 'Erreur lors de la récupération de l\'utilisateur',
 app.post('/logout', { preHandler: requireAuth }, async (request, reply) => {
 try {
 const userId = request.user!.userId;
+const restaurantId = request.user!.restaurantId;
 
 // Log activité de déconnexion
 await logActivity({
 type: 'USER_LOGOUT',
+restaurantId,
 userId,
 description: 'Déconnexion',
 ipAddress: request.ip,

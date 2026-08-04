@@ -6,8 +6,10 @@ export default async function categoriesRoutes(app: FastifyInstance) {
 // GET /api/categories - Liste toutes les catégories actives
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
+
 const categories = await prisma.category.findMany({
-where: { isActive: true },
+where: { isActive: true, restaurantId },
 orderBy: { displayOrder: 'asc' },
 include: {
 products: {
@@ -37,9 +39,10 @@ error: 'Erreur lors de la récupération des catégories',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const category = await prisma.category.findUnique({
-where: { id },
+const category = await prisma.category.findFirst({
+where: { id, restaurantId },
 include: {
 products: {
 where: { isActive: true },
@@ -77,6 +80,7 @@ error: 'Erreur lors de la récupération de la catégorie',
 // POST /api/categories - Créer une nouvelle catégorie
 app.post('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { name, description, icon, image, displayOrder, userId } = request.body as {
 name: string;
 description?: string;
@@ -93,6 +97,7 @@ description,
 icon,
 image,
 displayOrder: displayOrder || 0,
+restaurantId,
 },
 });
 
@@ -100,6 +105,7 @@ displayOrder: displayOrder || 0,
 if (userId) {
 await logActivity({
 type: 'CATEGORY_CREATED',
+restaurantId,
 userId,
 targetId: category.id,
 description: `Catégorie créée: ${name}`,
@@ -123,6 +129,7 @@ error: 'Erreur lors de la création de la catégorie',
 app.put('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { name, description, icon, image, displayOrder, isActive, userId } = request.body as {
 name?: string;
 description?: string;
@@ -132,6 +139,14 @@ displayOrder?: number;
 isActive?: boolean;
 userId?: string;
 };
+
+const existing = await prisma.category.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Catégorie non trouvée',
+});
+}
 
 const category = await prisma.category.update({
 where: { id },
@@ -149,6 +164,7 @@ isActive,
 if (userId) {
 await logActivity({
 type: 'CATEGORY_UPDATED',
+restaurantId,
 userId,
 targetId: id,
 description: `Catégorie modifiée: ${name || category.name}`,
@@ -173,7 +189,16 @@ error: 'Erreur lors de la mise à jour de la catégorie',
 app.delete('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { userId } = request.body as { userId?: string };
+
+const existing = await prisma.category.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Catégorie non trouvée',
+});
+}
 
 const category = await prisma.category.update({
 where: { id },
@@ -184,6 +209,7 @@ data: { isActive: false },
 if (userId) {
 await logActivity({
 type: 'CATEGORY_DELETED',
+restaurantId,
 userId,
 targetId: id,
 description: `Catégorie désactivée: ${category.name}`,

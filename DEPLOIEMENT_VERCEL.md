@@ -14,6 +14,12 @@ l'API en URL relative (`/api/...`), donc pas de CORS à configurer côté client
 - Base de données → Postgres géré par [Neon](https://neon.tech)
 - Uploads (logo, photos produits) → [Vercel Blob](https://vercel.com/storage/blob)
 
+**Multi-tenant** : une seule base sert plusieurs restaurants, chacun isolé
+par un `restaurantId`. À la connexion, l'utilisateur saisit un **code
+établissement** (ex. `CHEZFATOU`) en plus de son identifiant/mot de passe.
+Chaque nouveau restaurant est créé via le script `onboard-restaurant.ts`
+(section 7 ci-dessous), pas via l'écran d'inscription (il n'y en a pas).
+
 ## 1. Créer la base sur Neon
 
 1. Créer un compte / projet sur [neon.tech](https://neon.tech).
@@ -69,21 +75,45 @@ l'API en URL relative (`/api/...`), donc pas de CORS à configurer côté client
 
 ## 5. Pousser le schéma sur Neon
 
-Avant le premier déploiement, la base Neon est vide : il faut y créer les
-tables. Depuis un poste avec Node installé, en local :
+### Cas A — nouvelle base Neon, vide
 
 ```bash
 cd backend
 # Remplacer temporairement DATABASE_URL et DIRECT_URL dans backend/.env
-# par les valeurs Neon (la connexion DIRECT, pas pooled, pour db push),
-# puis :
+# par les valeurs Neon, puis :
 npx prisma db push
-npm run seed          # optionnel : données de démo / catégories fast-food
-npm run hash-passwords # si migration depuis une base existante avec mots de passe en clair
+npm run seed          # optionnel : restaurant de démo (code DEMO) + données de test
+npm run onboard-restaurant -- --code=MONRESTO --name="Mon Restaurant" --admin-username=admin --admin-email=admin@exemple.com --with-default-categories
 ```
 
 Remettre ensuite `backend/.env` sur les valeurs locales pour continuer à
 développer contre la base Postgres locale.
+
+### Cas B — base Neon déjà en production (déploiement mono-restaurant existant)
+
+Si Neon contient déjà les données d'un restaurant unique (déploiement
+antérieur au passage multi-tenant), **ne pas faire un simple `db push`** :
+la colonne `restaurantId` est obligatoire dans le schéma actuel et les
+lignes existantes n'en ont pas. Procédure (à faire une seule fois) :
+
+```bash
+cd backend
+# .env pointé temporairement sur Neon (DIRECT_URL = connexion directe, pas pooled)
+
+# 1. Vérifier qu'il n'y a pas deux clôtures pour la même date (la nouvelle
+#    contrainte devient "une clôture par restaurant et par jour") :
+#    SELECT date, COUNT(*) FROM daily_closures GROUP BY date HAVING COUNT(*) > 1;
+#    S'il y en a, garder la plus récente (closedAt) et supprimer les autres.
+
+# 2. Backfill : rattache toutes les lignes existantes à un restaurant n°1
+npm run backfill-restaurant-1 -- --code=MONRESTO --name="Mon Restaurant"
+
+# 3. Le schéma actuel du dépôt a déjà les contraintes resserrées :
+npx prisma db push --accept-data-loss
+```
+
+Déployer le nouveau code (front + back) **immédiatement après** cette étape :
+l'ancien code ne connaît pas `restaurantId` et échouera contre ce schéma.
 
 ## 6. Déployer
 
@@ -95,9 +125,26 @@ Vite standard, le service `backend` est bundlé tel quel comme fonction Fastify.
 
 Vérifier ensuite :
 - `https://<projet>.vercel.app/api/health` → `{"status":"ok","database":"connected"}`
-- `https://<projet>.vercel.app/` → écran de connexion
-- Connexion avec un compte créé par le seed, upload d'une image de produit
-  (doit renvoyer une URL `https://....public.blob.vercel-storage.com/...`)
+- `https://<projet>.vercel.app/` → écran de connexion (3 champs : code
+  établissement, identifiant, mot de passe)
+- Connexion avec le code établissement + les identifiants créés à l'étape 5,
+  upload d'une image de produit (doit renvoyer une URL
+  `https://....public.blob.vercel-storage.com/...`)
+
+## 7. Ajouter un nouveau restaurant client
+
+```bash
+cd backend
+npm run onboard-restaurant -- --code=CHEZFATOU --name="Chez Fatou" \
+  --admin-username=fatou --admin-email=fatou@exemple.com \
+  --with-default-categories
+```
+
+Le script affiche le code établissement et les identifiants admin générés
+(mot de passe aléatoire si `--admin-password` n'est pas fourni) — à
+transmettre au client, avec la consigne de changer le mot de passe après la
+première connexion. Peut être exécuté contre Neon (avec `DATABASE_URL`/
+`DIRECT_URL` temporairement sur les valeurs de prod) ou en local pour tester.
 
 ## Développement local : rien ne change
 

@@ -16,13 +16,14 @@ export default async function ordersRoutes(app: FastifyInstance) {
 // GET /api/orders - Liste toutes les commandes
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { status, type, date } = request.query as {
 status?: string;
 type?: string;
 date?: string;
 };
 
-const where: any = {};
+const where: any = { restaurantId };
 
 if (status) {
 where.status = status;
@@ -94,9 +95,10 @@ error: 'Erreur lors de la récupération des commandes',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const order = await prisma.order.findUnique({
-where: { id },
+const order = await prisma.order.findFirst({
+where: { id, restaurantId },
 include: {
 items: {
 include: {
@@ -150,6 +152,7 @@ error: 'Erreur lors de la récupération de la commande',
 // POST /api/orders - Créer une nouvelle commande
 app.post('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const {
 type,
 tableId,
@@ -174,16 +177,24 @@ optionId: string;
 };
 
 // L'utilisateur est dérivé du token JWT, jamais du corps de la requête (anti-usurpation)
-const userId = (request.user as any)?.userId as string | undefined;
-if (!userId) {
-return reply.status(401).send({ success: false, error: 'Non authentifié' });
-}
+const userId = request.user!.userId;
 
 if (!Array.isArray(items) || items.length === 0) {
 return reply.status(400).send({
 success: false,
 error: 'La commande doit contenir au moins un article',
 });
+}
+
+// La table référencée doit appartenir au même restaurant
+if (tableId) {
+const table = await prisma.table.findFirst({ where: { id: tableId, restaurantId } });
+if (!table) {
+return reply.status(400).send({
+success: false,
+error: 'Table invalide',
+});
+}
 }
 
 // Récupération groupée des produits (avec recettes) et des options -> évite le N+1
@@ -194,16 +205,27 @@ const optionIds = [
 
 const [products, options] = await Promise.all([
 prisma.product.findMany({
-where: { id: { in: productIds } },
+where: { id: { in: productIds }, restaurantId },
 include: { recipes: true },
 }),
 optionIds.length
-? prisma.option.findMany({ where: { id: { in: optionIds } } })
+? prisma.option.findMany({ where: { id: { in: optionIds }, restaurantId } })
 : Promise.resolve([] as any[]),
 ]);
 
 const productMap = new Map(products.map((p) => [p.id, p]));
 const optionMap = new Map(options.map((o: any) => [o.id, o]));
+
+// Toute option demandée doit résoudre pour ce restaurant (sinon échec explicite
+// plutôt que de l'ignorer silencieusement, ce qui fausserait le total facturé)
+for (const optionId of optionIds) {
+if (!optionMap.has(optionId)) {
+return reply.status(400).send({
+success: false,
+error: `Option ${optionId} invalide`,
+});
+}
+}
 
 // Calcul des totaux + préparation des items + besoins en ingrédients
 let subtotal = 0;
@@ -272,12 +294,12 @@ const tax = 0;
 const discount = 0;
 const total = subtotal + tax - discount;
 
-// Générer un numéro de commande unique
+// Générer un numéro de commande unique (scopé au restaurant)
 let orderNumber = generateOrderNumber();
-let exists = await prisma.order.findUnique({ where: { orderNumber } });
+let exists = await prisma.order.findFirst({ where: { orderNumber, restaurantId } });
 while (exists) {
 orderNumber = generateOrderNumber();
-exists = await prisma.order.findUnique({ where: { orderNumber } });
+exists = await prisma.order.findFirst({ where: { orderNumber, restaurantId } });
 }
 
 // Création de la commande + déstockage dans une transaction atomique :
@@ -296,6 +318,7 @@ tax,
 discount,
 total,
 userId,
+restaurantId,
 items: {
 create: orderItemsData.map((item) => ({
 productId: item.productId,
@@ -356,6 +379,7 @@ return created;
 // Log activity
 await logActivity({
 type: 'ORDER_CREATED',
+restaurantId,
 userId,
 targetId: order.id,
 description: `Commande créée: ${orderNumber} (${total.toFixed(2)} F CFA)`,
@@ -379,11 +403,12 @@ error: 'Erreur lors de la création de la commande',
 app.patch('/:id/status', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { status } = request.body as { status: string };
 
-// Vérifier si la commande est déjà annulée
-const existingOrder = await prisma.order.findUnique({
-where: { id },
+// Vérifier si la commande existe, appartient au restaurant, et n'est pas déjà annulée
+const existingOrder = await prisma.order.findFirst({
+where: { id, restaurantId },
 select: { status: true, orderNumber: true },
 });
 
@@ -431,11 +456,12 @@ error: 'Erreur lors de la mise à jour du statut',
 app.delete('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
-const userId = (request.user as any)?.userId as string | undefined;
+const restaurantId = request.user!.restaurantId;
+const userId = request.user!.userId;
 
 // Charger la commande avec ses items et leurs recettes (pour ré-approvisionner le stock)
-const existing = await prisma.order.findUnique({
-where: { id },
+const existing = await prisma.order.findFirst({
+where: { id, restaurantId },
 include: {
 items: { include: { product: { include: { recipes: true } } } },
 },
@@ -503,6 +529,7 @@ return updated;
 if (userId) {
 await logActivity({
 type: 'ORDER_CANCELLED',
+restaurantId,
 userId,
 targetId: id,
 description: `Commande annulée: ${order.orderNumber} (paiements supprimés, stock réapprovisionné)`,
@@ -527,6 +554,7 @@ error: 'Erreur lors de l\'annulation de la commande',
 // GET /api/orders/stats/today - Statistiques du jour
 app.get('/stats/today', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 const tomorrow = new Date(today);
@@ -534,6 +562,7 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 
 const orders = await prisma.order.findMany({
 where: {
+restaurantId,
 createdAt: {
 gte: today,
 lt: tomorrow,

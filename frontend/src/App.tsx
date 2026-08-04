@@ -68,10 +68,12 @@ setTimeout(loadSettings, 3000);
 }
 };
 
-if (!isLoaded) {
+// Les paramètres sont propres à chaque restaurant : on ne peut les charger
+// qu'une fois connecté (le restaurant est résolu côté serveur via le JWT).
+if (isAuthenticated && !isLoaded) {
 loadSettings();
 }
-}, [isLoaded, setSettings]);
+}, [isAuthenticated, isLoaded, setSettings]);
 
 // Appliquer les couleurs dynamiquement via CSS variables
 useEffect(() => {

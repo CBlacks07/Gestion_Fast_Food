@@ -12,7 +12,9 @@
 "migrate:deploy": "prisma migrate deploy",
 "db:push": "prisma db push",
 "seed": "tsx src/seed.ts",
-"reset-db": "tsx src/scripts/reset-db.ts",
+"reset-tenant-db": "tsx src/scripts/reset-tenant-db.ts",
+"backfill-restaurant-1": "tsx src/scripts/backfill-restaurant-1.ts",
+"onboard-restaurant": "tsx src/scripts/onboard-restaurant.ts",
 "hash-passwords": "tsx src/scripts/hash-passwords.ts",
 "prisma:generate": "prisma generate",
 "prisma:studio": "prisma studio"

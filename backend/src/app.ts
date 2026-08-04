@@ -143,7 +143,6 @@ export function buildApp(): FastifyInstance {
   // sauf une liste blanche d'endpoints publics nécessaires avant connexion.
   const PUBLIC_ENDPOINTS: Array<{ method: string; path: string }> = [
     { method: 'POST', path: '/api/auth/login' },
-    { method: 'GET', path: '/api/app-settings' }, // logo/nom affichés sur l'écran de login
     { method: 'GET', path: '/api/health' }, // sonde de disponibilité
   ];
 

@@ -2,6 +2,7 @@
 
 export interface JWTPayload {
 userId: string;
+restaurantId: string;
 role: string;
 email: string;
 }

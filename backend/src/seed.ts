@@ -2,14 +2,27 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const DEMO_RESTAURANT_CODE = 'DEMO';
+
 async function main() {
 console.log(' Starting database seeding...');
 
+// Restaurant de démo (idempotent : réutilisé s'il existe déjà)
+const restaurant = await prisma.restaurant.upsert({
+where: { code: DEMO_RESTAURANT_CODE },
+update: {},
+create: { code: DEMO_RESTAURANT_CODE, name: 'Restaurant Démo', isActive: true },
+});
+const restaurantId = restaurant.id;
+
+console.log(' Restaurant:', restaurant.code);
+
 // Créer un utilisateur admin par défaut
 const admin = await prisma.user.upsert({
-where: { email: 'admin@fastfood.com' },
+where: { restaurantId_email: { restaurantId, email: 'admin@fastfood.com' } },
 update: {},
 create: {
+restaurantId,
 email: 'admin@fastfood.com',
 username: 'admin',
 password: 'admin123', // À hasher en production !
@@ -23,9 +36,10 @@ console.log(' Admin user created:', admin.email);
 
 // Créer un caissier
 const cashier = await prisma.user.upsert({
-where: { email: 'cashier@fastfood.com' },
+where: { restaurantId_email: { restaurantId, email: 'cashier@fastfood.com' } },
 update: {},
 create: {
+restaurantId,
 email: 'cashier@fastfood.com',
 username: 'cashier',
 password: 'cashier123',
@@ -40,6 +54,7 @@ console.log(' Cashier user created:', cashier.email);
 // Créer des catégories
 const burgers = await prisma.category.create({
 data: {
+restaurantId,
 name: 'Burgers',
 description: 'Nos délicieux burgers',
 icon: '',
@@ -49,6 +64,7 @@ displayOrder: 1,
 
 const drinks = await prisma.category.create({
 data: {
+restaurantId,
 name: 'Boissons',
 description: 'Boissons fraîches',
 icon: '',
@@ -58,6 +74,7 @@ displayOrder: 2,
 
 const sides = await prisma.category.create({
 data: {
+restaurantId,
 name: 'Accompagnements',
 description: 'Frites, salades, etc.',
 icon: '',
@@ -68,18 +85,18 @@ displayOrder: 3,
 console.log(' Categories created');
 
 // Créer des ingrédients
-const ingredients = await prisma.ingredient.createMany({
+await prisma.ingredient.createMany({
 data: [
-{ name: 'Pain burger', unit: 'PIECE', currentStock: 100, minStock: 20, unitCost: 0.5 },
-{ name: 'Steak haché', unit: 'GRAM', currentStock: 5000, minStock: 1000, unitCost: 0.01 },
-{ name: 'Fromage', unit: 'GRAM', currentStock: 2000, minStock: 500, unitCost: 0.015 },
-{ name: 'Salade', unit: 'GRAM', currentStock: 3000, minStock: 500, unitCost: 0.005 },
-{ name: 'Tomate', unit: 'GRAM', currentStock: 3000, minStock: 500, unitCost: 0.008 },
-{ name: 'Oignon', unit: 'GRAM', currentStock: 2000, minStock: 500, unitCost: 0.006 },
-{ name: 'Sauce burger', unit: 'MILLILITER', currentStock: 5000, minStock: 1000, unitCost: 0.003 },
-{ name: 'Pommes de terre', unit: 'GRAM', currentStock: 10000, minStock: 2000, unitCost: 0.002 },
-{ name: 'Coca-Cola', unit: 'LITER', currentStock: 50, minStock: 10, unitCost: 1.5 },
-{ name: 'Fanta', unit: 'LITER', currentStock: 40, minStock: 10, unitCost: 1.5 },
+{ restaurantId, name: 'Pain burger', unit: 'PIECE', currentStock: 100, minStock: 20, unitCost: 0.5 },
+{ restaurantId, name: 'Steak haché', unit: 'GRAM', currentStock: 5000, minStock: 1000, unitCost: 0.01 },
+{ restaurantId, name: 'Fromage', unit: 'GRAM', currentStock: 2000, minStock: 500, unitCost: 0.015 },
+{ restaurantId, name: 'Salade', unit: 'GRAM', currentStock: 3000, minStock: 500, unitCost: 0.005 },
+{ restaurantId, name: 'Tomate', unit: 'GRAM', currentStock: 3000, minStock: 500, unitCost: 0.008 },
+{ restaurantId, name: 'Oignon', unit: 'GRAM', currentStock: 2000, minStock: 500, unitCost: 0.006 },
+{ restaurantId, name: 'Sauce burger', unit: 'MILLILITER', currentStock: 5000, minStock: 1000, unitCost: 0.003 },
+{ restaurantId, name: 'Pommes de terre', unit: 'GRAM', currentStock: 10000, minStock: 2000, unitCost: 0.002 },
+{ restaurantId, name: 'Coca-Cola', unit: 'LITER', currentStock: 50, minStock: 10, unitCost: 1.5 },
+{ restaurantId, name: 'Fanta', unit: 'LITER', currentStock: 40, minStock: 10, unitCost: 1.5 },
 ],
 });
 
@@ -88,6 +105,7 @@ console.log(' Ingredients created');
 // Créer des produits
 const burger = await prisma.product.create({
 data: {
+restaurantId,
 name: 'Burger Classic',
 description: 'Notre burger signature',
 price: 5.99,
@@ -100,6 +118,7 @@ preparationTime: 10,
 
 const cheeseburger = await prisma.product.create({
 data: {
+restaurantId,
 name: 'Cheeseburger',
 description: 'Burger avec fromage',
 price: 6.99,
@@ -112,6 +131,7 @@ preparationTime: 10,
 
 const fries = await prisma.product.create({
 data: {
+restaurantId,
 name: 'Frites',
 description: 'Frites croustillantes',
 price: 2.99,
@@ -124,6 +144,7 @@ preparationTime: 5,
 
 const cola = await prisma.product.create({
 data: {
+restaurantId,
 name: 'Coca-Cola',
 description: 'Coca-Cola 33cl',
 price: 1.99,
@@ -139,6 +160,7 @@ console.log(' Products created');
 // Créer des options
 const extraCheese = await prisma.option.create({
 data: {
+restaurantId,
 name: 'Supplément fromage',
 type: 'SUPPLEMENT',
 price: 0.5,
@@ -147,6 +169,7 @@ price: 0.5,
 
 const noCheese = await prisma.option.create({
 data: {
+restaurantId,
 name: 'Sans fromage',
 type: 'REMOVAL',
 price: 0,
@@ -155,6 +178,7 @@ price: 0,
 
 const extraSauce = await prisma.option.create({
 data: {
+restaurantId,
 name: 'Sauce en plus',
 type: 'SUPPLEMENT',
 price: 0.3,
@@ -176,7 +200,7 @@ data: [
 console.log(' Product options linked');
 
 // Créer des recettes (lien produit -> ingrédients)
-const ingredientList = await prisma.ingredient.findMany();
+const ingredientList = await prisma.ingredient.findMany({ where: { restaurantId } });
 const painBurger = ingredientList.find(i => i.name === 'Pain burger');
 const steakHache = ingredientList.find(i => i.name === 'Steak haché');
 const fromage = ingredientList.find(i => i.name === 'Fromage');
@@ -236,17 +260,17 @@ console.log(' Recipes created');
 // Créer des tables
 await prisma.table.createMany({
 data: [
-{ number: 1, capacity: 2 },
-{ number: 2, capacity: 4 },
-{ number: 3, capacity: 4 },
-{ number: 4, capacity: 6 },
-{ number: 5, capacity: 2 },
+{ restaurantId, number: 1, capacity: 2 },
+{ restaurantId, number: 2, capacity: 4 },
+{ restaurantId, number: 3, capacity: 4 },
+{ restaurantId, number: 4, capacity: 6 },
+{ restaurantId, number: 5, capacity: 2 },
 ],
 });
 
 console.log(' Tables created');
 
-console.log(' Seeding completed successfully!');
+console.log(` Seeding completed successfully! (code établissement: ${DEMO_RESTAURANT_CODE})`);
 }
 
 main()

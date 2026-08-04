@@ -17,6 +17,38 @@ datasource db {
 }
 
 // ============================================
+// MULTI-TENANT : UN RESTAURANT = UN CLIENT
+// ============================================
+// Étape 1 de la migration multi-tenant (voir C:\Users\CCL\.claude\plans\quiet-foraging-kahn.md) :
+// restaurantId ajouté en NULLABLE sur tous les modèles racines, sans toucher
+// aux anciennes contraintes @unique globales. Ce push est rétrocompatible
+// avec le code actuellement déployé (qui ignore simplement la colonne).
+
+model Restaurant {
+  id        String   @id @default(cuid())
+  code      String   @unique // Code établissement saisi à la connexion (ex: CHEZFATOU)
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users         User[]
+  categories    Category[]
+  products      Product[]
+  options       Option[]
+  ingredients   Ingredient[]
+  tables        Table[]
+  orders        Order[]
+  payments      Payment[]
+  dailyClosures DailyClosure[]
+  activityLogs  ActivityLog[]
+  appSettings   AppSettings?
+
+  @@map("restaurants")
+}
+
+// ============================================
 // GESTION DES UTILISATEURS ET RÔLES
 // ============================================
 
@@ -30,8 +62,8 @@ enum Role {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
+  email     String
+  username  String
   password  String
   firstName String?
   lastName  String?
@@ -40,12 +72,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   orders         Order[]
   payments       Payment[]
   dailyClosures  DailyClosure[]
   activityLogs   ActivityLog[]
 
+  @@unique([restaurantId, email])
+  @@unique([restaurantId, username])
   @@map("users")
 }
 
@@ -64,9 +101,13 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   products    Product[]
 
+  @@index([restaurantId])
   @@map("categories")
 }
 
@@ -93,12 +134,16 @@ model Product {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   category     Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   options      ProductOption[]
   recipes      Recipe[]
   orderItems   OrderItem[]
 
+  @@index([restaurantId])
   @@map("products")
 }
 
@@ -117,10 +162,14 @@ model Option {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   products    ProductOption[]
   orderItemOptions OrderItemOption[]
 
+  @@index([restaurantId])
   @@map("options")
 }
 
@@ -154,7 +203,7 @@ enum IngredientUnit {
 
 model Ingredient {
   id            String         @id @default(cuid())
-  name          String         @unique
+  name          String
   description   String?
   unit          IngredientUnit
   currentStock  Decimal        @db.Decimal(10, 3) @default(0)
@@ -164,10 +213,14 @@ model Ingredient {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   recipes       Recipe[]
   stockMovements StockMovement[]
 
+  @@unique([restaurantId, name])
   @@map("ingredients")
 }
 
@@ -231,21 +284,25 @@ enum OrderStatus {
 
 model Table {
   id        String   @id @default(cuid())
-  number    Int      @unique
+  number    Int
   capacity  Int      @default(4)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   orders    Order[]
 
+  @@unique([restaurantId, number])
   @@map("tables")
 }
 
 model Order {
   id            String      @id @default(cuid())
-  orderNumber   String      @unique // Numéro de commande lisible
+  orderNumber   String      // Numéro de commande lisible
   type          OrderType   @default(DINE_IN)
   status        OrderStatus @default(PENDING)
   tableId       String?
@@ -260,12 +317,17 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   table         Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
   user          User        @relation(fields: [userId], references: [id])
   items         OrderItem[]
   payments      Payment[]
 
+  @@unique([restaurantId, orderNumber])
+  @@index([restaurantId])
   @@map("orders")
 }
 
@@ -333,10 +395,14 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   user          User          @relation(fields: [userId], references: [id])
 
+  @@index([restaurantId])
   @@map("payments")
 }
 
@@ -349,6 +415,9 @@ model DailyClosure {
   date              DateTime // Date de la clôture (début de journée)
   closedAt          DateTime @default(now()) // Moment de la clôture
   closedBy          String   // Utilisateur qui a fait la clôture
+
+  restaurantId      String
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   // Statistiques de la journée
   totalOrders       Int
@@ -370,7 +439,7 @@ model DailyClosure {
   // Relations
   user              User     @relation(fields: [closedBy], references: [id])
 
-  @@unique([date, closedBy]) // Une seule clôture par jour et par utilisateur
+  @@unique([restaurantId, date])
   @@map("daily_closures")
 }
 
@@ -408,12 +477,16 @@ model ActivityLog {
   ipAddress   String?      // Adresse IP (optionnel)
   createdAt   DateTime     @default(now())
 
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   // Relations
   user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([type])
   @@index([createdAt])
+  @@index([restaurantId])
   @@map("activity_logs")
 }
 
@@ -423,6 +496,9 @@ model ActivityLog {
 
 model AppSettings {
   id              String   @id @default(cuid())
+
+  restaurantId    String   @unique
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   // Branding de l'application
   appName         String   @default("Gestion Fast-Food")

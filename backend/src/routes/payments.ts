@@ -6,6 +6,7 @@ export default async function paymentsRoutes(app: FastifyInstance) {
 // GET /api/payments - Liste tous les paiements
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { orderId, method, status, date } = request.query as {
 orderId?: string;
 method?: string;
@@ -13,7 +14,7 @@ status?: string;
 date?: string;
 };
 
-const where: any = {};
+const where: any = { restaurantId };
 
 if (orderId) {
 where.orderId = orderId;
@@ -78,9 +79,10 @@ error: 'Erreur lors de la récupération des paiements',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const payment = await prisma.payment.findUnique({
-where: { id },
+const payment = await prisma.payment.findFirst({
+where: { id, restaurantId },
 include: {
 order: true,
 user: {
@@ -117,6 +119,7 @@ error: 'Erreur lors de la récupération du paiement',
 // POST /api/payments - Créer un nouveau paiement
 app.post('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { orderId, method, amount, reference } = request.body as {
 orderId: string;
 method: string;
@@ -125,10 +128,7 @@ reference?: string;
 };
 
 // L'utilisateur est dérivé du token JWT, jamais du corps (anti-usurpation)
-const userId = (request.user as any)?.userId as string | undefined;
-if (!userId) {
-return reply.status(401).send({ success: false, error: 'Non authentifié' });
-}
+const userId = request.user!.userId;
 
 if (!Number.isFinite(amount) || amount <= 0) {
 return reply.status(400).send({
@@ -137,9 +137,9 @@ error: 'Le montant du paiement doit être supérieur à 0',
 });
 }
 
-// Vérifier que la commande existe
-const order = await prisma.order.findUnique({
-where: { id: orderId },
+// Vérifier que la commande existe et appartient au restaurant
+const order = await prisma.order.findFirst({
+where: { id: orderId, restaurantId },
 include: {
 payments: true,
 },
@@ -181,6 +181,7 @@ method: method as any,
 amount,
 reference,
 userId,
+restaurantId,
 status: 'COMPLETED',
 },
 include: {
@@ -202,6 +203,7 @@ const newTotalPaid = totalPaid + amount;
 // Log activity
 await logActivity({
 type: 'PAYMENT_CREATED',
+restaurantId,
 userId,
 targetId: payment.id,
 description: `Paiement enregistré: ${amount.toFixed(2)} F CFA (${method})`,
@@ -226,7 +228,16 @@ error: 'Erreur lors de la création du paiement',
 app.patch('/:id/status', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { status } = request.body as { status: string };
+
+const existing = await prisma.payment.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Paiement non trouvé',
+});
+}
 
 const payment = await prisma.payment.update({
 where: { id },
@@ -254,9 +265,10 @@ error: 'Erreur lors de la mise à jour du statut',
 app.get('/order/:orderId', async (request, reply) => {
 try {
 const { orderId } = request.params as { orderId: string };
+const restaurantId = request.user!.restaurantId;
 
 const payments = await prisma.payment.findMany({
-where: { orderId },
+where: { orderId, restaurantId },
 include: {
 user: {
 select: {
@@ -276,8 +288,8 @@ const totalPaid = payments
 .reduce((sum, p) => sum + Number(p.amount), 0);
 
 // Récupérer le total de la commande
-const order = await prisma.order.findUnique({
-where: { id: orderId },
+const order = await prisma.order.findFirst({
+where: { id: orderId, restaurantId },
 select: { total: true },
 });
 
@@ -304,6 +316,7 @@ error: 'Erreur lors de la récupération des paiements',
 // GET /api/payments/stats/today - Statistiques des paiements du jour
 app.get('/stats/today', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 const tomorrow = new Date(today);
@@ -311,6 +324,7 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 
 const payments = await prisma.payment.findMany({
 where: {
+restaurantId,
 createdAt: {
 gte: today,
 lt: tomorrow,

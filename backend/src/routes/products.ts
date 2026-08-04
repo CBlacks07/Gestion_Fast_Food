@@ -7,12 +7,13 @@ export default async function productsRoutes(app: FastifyInstance) {
 // GET /api/products - Liste tous les produits
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { categoryId, available } = request.query as {
 categoryId?: string;
 available?: string;
 };
 
-const where: any = { isActive: true };
+const where: any = { isActive: true, restaurantId };
 
 if (categoryId) {
 where.categoryId = categoryId;
@@ -59,9 +60,10 @@ error: 'Erreur lors de la récupération des produits',
 app.get('/:id', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 
-const product = await prisma.product.findUnique({
-where: { id },
+const product = await prisma.product.findFirst({
+where: { id, restaurantId },
 include: {
 category: true,
 options: {
@@ -100,6 +102,7 @@ error: 'Erreur lors de la récupération du produit',
 // POST /api/products - Créer un nouveau produit (ADMIN, MANAGER)
 app.post('/', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const {
 name,
 description,
@@ -124,6 +127,15 @@ displayOrder?: number;
 userId?: string;
 };
 
+// La catégorie référencée doit appartenir au même restaurant
+const category = await prisma.category.findFirst({ where: { id: categoryId, restaurantId } });
+if (!category) {
+return reply.status(400).send({
+success: false,
+error: 'Catégorie invalide',
+});
+}
+
 const product = await prisma.product.create({
 data: {
 name,
@@ -135,6 +147,7 @@ type: type as any,
 categoryId,
 preparationTime,
 displayOrder: displayOrder || 0,
+restaurantId,
 },
 include: {
 category: true,
@@ -145,6 +158,7 @@ category: true,
 if (userId) {
 await logActivity({
 type: 'PRODUCT_CREATED',
+restaurantId,
 userId,
 targetId: product.id,
 description: `Produit créé: ${name}`,
@@ -169,6 +183,7 @@ error: 'Erreur lors de la création du produit',
 app.put('/:id', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const {
 name,
 description,
@@ -183,6 +198,24 @@ displayOrder,
 categoryId,
 userId,
 } = request.body as any;
+
+const existing = await prisma.product.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Produit non trouvé',
+});
+}
+
+if (categoryId) {
+const category = await prisma.category.findFirst({ where: { id: categoryId, restaurantId } });
+if (!category) {
+return reply.status(400).send({
+success: false,
+error: 'Catégorie invalide',
+});
+}
+}
 
 const product = await prisma.product.update({
 where: { id },
@@ -213,6 +246,7 @@ option: true,
 if (userId) {
 await logActivity({
 type: 'PRODUCT_UPDATED',
+restaurantId,
 userId,
 targetId: id,
 description: `Produit modifié: ${name || product.name}`,
@@ -237,11 +271,12 @@ error: 'Erreur lors de la mise à jour du produit',
 app.delete('/:id', { preHandler: requireRole('ADMIN', 'MANAGER') }, async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { userId } = request.body as { userId?: string };
 
-// Vérifier si le produit existe
-const existingProduct = await prisma.product.findUnique({
-where: { id },
+// Vérifier si le produit existe et appartient au restaurant
+const existingProduct = await prisma.product.findFirst({
+where: { id, restaurantId },
 include: { orderItems: { take: 1 } },
 });
 
@@ -268,6 +303,7 @@ await prisma.product.delete({ where: { id } });
 if (userId) {
 await logActivity({
 type: 'PRODUCT_DELETED',
+restaurantId,
 userId,
 targetId: id,
 description: `Produit supprimé: ${existingProduct.name}`,
@@ -291,7 +327,16 @@ error: 'Erreur lors de la suppression du produit',
 app.patch('/:id/availability', async (request, reply) => {
 try {
 const { id } = request.params as { id: string };
+const restaurantId = request.user!.restaurantId;
 const { isAvailable } = request.body as { isAvailable: boolean };
+
+const existing = await prisma.product.findFirst({ where: { id, restaurantId } });
+if (!existing) {
+return reply.status(404).send({
+success: false,
+error: 'Produit non trouvé',
+});
+}
 
 const product = await prisma.product.update({
 where: { id },

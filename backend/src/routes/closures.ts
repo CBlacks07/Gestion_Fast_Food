@@ -6,9 +6,10 @@ export default async function closuresRoutes(app: FastifyInstance) {
 // GET /api/closures - Liste toutes les clôtures (avec filtrage optionnel par userId)
 app.get('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { userId } = request.query as { userId?: string };
 
-const where: any = {};
+const where: any = { restaurantId };
 if (userId) {
 where.closedBy = userId;
 }
@@ -45,17 +46,12 @@ error: 'Erreur lors de la récupération des clôtures',
 app.get('/:date', async (request, reply) => {
 try {
 const { date } = request.params as { date: string };
-const { userId } = request.query as { userId?: string };
+const restaurantId = request.user!.restaurantId;
 const targetDate = new Date(date);
 targetDate.setHours(0, 0, 0, 0);
 
-const where: any = { date: targetDate };
-if (userId) {
-where.closedBy = userId;
-}
-
 const closure = await prisma.dailyClosure.findFirst({
-where,
+where: { date: targetDate, restaurantId },
 include: {
 user: {
 select: {
@@ -91,6 +87,7 @@ error: 'Erreur lors de la récupération de la clôture',
 // POST /api/closures - Créer une clôture pour une date donnée
 app.post('/', async (request, reply) => {
 try {
+const restaurantId = request.user!.restaurantId;
 const { date, userId, notes } = request.body as {
 date: string;
 userId: string;
@@ -102,24 +99,25 @@ targetDate.setHours(0, 0, 0, 0);
 const endOfDay = new Date(targetDate);
 endOfDay.setHours(23, 59, 59, 999);
 
-// Vérifier si cet utilisateur a déjà clôturé cette date
+// Une seule clôture par restaurant et par jour (quel que soit l'utilisateur)
 const existingClosure = await prisma.dailyClosure.findFirst({
 where: {
 date: targetDate,
-closedBy: userId,
+restaurantId,
 },
 });
 
 if (existingClosure) {
 return reply.status(400).send({
 success: false,
-error: 'Vous avez déjà clôturé cette date',
+error: 'Cette date a déjà été clôturée',
 });
 }
 
-// Récupérer toutes les commandes de la journée
+// Récupérer toutes les commandes de la journée pour ce restaurant
 const orders = await prisma.order.findMany({
 where: {
+restaurantId,
 createdAt: {
 gte: targetDate,
 lte: endOfDay,
@@ -152,9 +150,10 @@ const totalRevenue = orders
 .filter((o) => o.status !== 'CANCELLED')
 .reduce((sum, order) => sum + Number(order.total), 0);
 
-// Récupérer tous les paiements de la journée
+// Récupérer tous les paiements de la journée pour ce restaurant
 const payments = await prisma.payment.findMany({
 where: {
+restaurantId,
 status: 'COMPLETED',
 createdAt: {
 gte: targetDate,
@@ -181,9 +180,9 @@ paymentsByMethod[payment.method] += Number(payment.amount);
 const userStats: Record<string, any> = {};
 
 orders.forEach((order) => {
-const userId = order.userId;
-if (!userStats[userId]) {
-userStats[userId] = {
+const orderUserId = order.userId;
+if (!userStats[orderUserId]) {
+userStats[orderUserId] = {
 user: order.user,
 totalOrders: 0,
 completedOrders: 0,
@@ -193,27 +192,27 @@ products: {},
 };
 }
 
-userStats[userId].totalOrders += 1;
+userStats[orderUserId].totalOrders += 1;
 if (order.status === 'DELIVERED') {
-userStats[userId].completedOrders += 1;
-userStats[userId].revenue += Number(order.total);
+userStats[orderUserId].completedOrders += 1;
+userStats[orderUserId].revenue += Number(order.total);
 }
 if (order.status === 'CANCELLED') {
-userStats[userId].cancelledOrders += 1;
+userStats[orderUserId].cancelledOrders += 1;
 }
 
 // Compter les produits vendus
 order.items.forEach((item) => {
 const productId = item.productId;
-if (!userStats[userId].products[productId]) {
-userStats[userId].products[productId] = {
+if (!userStats[orderUserId].products[productId]) {
+userStats[orderUserId].products[productId] = {
 name: item.product.name,
 quantity: 0,
 revenue: 0,
 };
 }
-userStats[userId].products[productId].quantity += Number(item.quantity);
-userStats[userId].products[productId].revenue += Number(item.total);
+userStats[orderUserId].products[productId].quantity += Number(item.quantity);
+userStats[orderUserId].products[productId].revenue += Number(item.total);
 });
 });
 
@@ -236,6 +235,7 @@ const closure = await prisma.dailyClosure.create({
 data: {
 date: targetDate,
 closedBy: userId,
+restaurantId,
 totalOrders,
 completedOrders,
 cancelledOrders,
@@ -264,6 +264,7 @@ lastName: true,
 // Logger l'activité
 await logActivity({
 type: 'DAILY_CLOSURE',
+restaurantId,
 userId,
 targetId: closure.id,
 description: `Clôture de journée effectuée pour le ${targetDate.toLocaleDateString('fr-FR')}`,
@@ -286,36 +287,18 @@ error: 'Erreur lors de la création de la clôture',
 }
 });
 
-// GET /api/closures/check/:date - Vérifier si une clôture existe pour une date (optionnellement pour un utilisateur)
+// GET /api/closures/check/:date - Vérifier si une clôture existe pour une date
+// (le paramètre userId reste accepté pour compatibilité ascendante mais n'a plus
+// d'effet : une clôture est désormais par restaurant et par jour, pas par utilisateur)
 app.get('/check/:date', async (request, reply) => {
 try {
 const { date } = request.params as { date: string };
-const { userId } = request.query as { userId?: string };
+const restaurantId = request.user!.restaurantId;
 const targetDate = new Date(date);
 targetDate.setHours(0, 0, 0, 0);
 
-// Si userId est fourni, vérifier si cet utilisateur a déjà clôturé cette date
-if (userId) {
 const closure = await prisma.dailyClosure.findFirst({
-where: {
-date: targetDate,
-closedBy: userId,
-},
-select: { id: true, closedAt: true },
-});
-
-return reply.send({
-success: true,
-data: {
-exists: !!closure,
-closure,
-},
-});
-}
-
-// Sinon, vérifier si la date a été clôturée par n'importe qui (pour admin)
-const closure = await prisma.dailyClosure.findFirst({
-where: { date: targetDate },
+where: { date: targetDate, restaurantId },
 select: { id: true, closedAt: true },
 });
 
