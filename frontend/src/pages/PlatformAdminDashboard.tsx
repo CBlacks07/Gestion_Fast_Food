@@ -146,7 +146,7 @@ return (
 type="text"
 value={code}
 onChange={(e) => setCode(e.target.value.toUpperCase())}
-placeholder="CHEZFATOU"
+placeholder="DREY'SWEET"
 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-slate-400 uppercase"
 />
 </div>

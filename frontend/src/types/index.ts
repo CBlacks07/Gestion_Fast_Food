@@ -207,6 +207,38 @@ createdAt: string;
 updatedAt: string;
 }
 
+// Statistiques équipe (TeamPage) — promues depuis des interfaces locales
+// pour être réutilisables par la version mobile.
+export interface UserStats {
+user: { id: string; username: string; firstName?: string; lastName?: string; role: Role };
+totalOrders: number;
+completedOrders: number;
+totalRevenue: number;
+totalPayments: number;
+}
+
+export interface UserDetailedStats {
+user: { id: string; username: string; firstName?: string; lastName?: string; role: Role };
+date: string;
+stats: {
+totalOrders: number;
+completedOrders: number;
+cancelledOrders: number;
+totalRevenue: number;
+averageOrderValue: number;
+};
+orders: Array<{
+id: string;
+orderNumber: string;
+createdAt: string;
+status: OrderStatus;
+total: number;
+items: Array<{ productId: string; quantity: number; total: number; product: { name: string } }>;
+}>;
+topProducts: Array<{ id: string; name: string; quantity: number; revenue: number }>;
+paymentsByMethod: Record<string, { count: number; total: number }>;
+}
+
 // API Response types
 export interface ApiResponse<T> {
 success: boolean;

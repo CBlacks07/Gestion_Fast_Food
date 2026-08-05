@@ -1,11 +1,9 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  ShoppingCart, ClipboardList, BarChart2, Package, Lock,
-  Users, Tag, Layers, Settings, UserCog, LogOut, UtensilsCrossed,
-} from 'lucide-react';
+import { LogOut, UtensilsCrossed } from 'lucide-react';
 import { useAppSettingsStore } from '../store/appSettingsStore';
 import { API_BASE_URL } from '../services/api';
+import { menuItemsForRole, managementMenuItemsForRole, ROLE_LABELS } from '../config/navigation';
 import ConfirmDialog from './ConfirmDialog';
 
 interface LayoutProps {
@@ -13,15 +11,6 @@ interface LayoutProps {
   onLogout: () => void;
   username: string;
   userRole: string;
-}
-
-type LucideIcon = typeof ShoppingCart;
-
-interface MenuItem {
-  path: string;
-  label: string;
-  Icon: LucideIcon;
-  roles: string[];
 }
 
 export default function Layout({ children, onLogout, username, userRole }: LayoutProps) {
@@ -32,29 +21,9 @@ export default function Layout({ children, onLogout, username, userRole }: Layou
 
   const isAdmin = userRole === 'ADMIN';
 
-  const menuItems: MenuItem[] = [
-    { path: '/pos',       label: 'Point de Vente', Icon: ShoppingCart,  roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
-    { path: '/orders',    label: 'Commandes',      Icon: ClipboardList, roles: ['ADMIN', 'MANAGER', 'CASHIER', 'KITCHEN', 'WAITER'] },
-    { path: '/dashboard', label: 'Statistiques',   Icon: BarChart2,     roles: ['MANAGER', 'CASHIER'] },
-    { path: '/stock',     label: 'Stocks',         Icon: Package,       roles: ['MANAGER'] },
-    { path: '/closures',  label: 'Clôtures',       Icon: Lock,          roles: ['MANAGER', 'CASHIER'] },
-    { path: '/team',      label: 'Équipe',         Icon: Users,         roles: ['MANAGER'] },
-  ].filter((item) => item.roles.includes(userRole));
-
-  const managementMenuItems: MenuItem[] = [
-    { path: '/products-management',   label: 'Produits',        Icon: Tag,      roles: ['MANAGER'] },
-    { path: '/categories-management', label: 'Catégories',      Icon: Layers,   roles: ['MANAGER'] },
-    { path: '/app-settings',          label: 'Paramètres App',  Icon: Settings, roles: ['ADMIN'] },
-    { path: '/users-management',      label: 'Utilisateurs',    Icon: UserCog,  roles: ['ADMIN'] },
-  ].filter((item) => item.roles.includes(userRole));
-
-  const roleLabel: Record<string, string> = {
-    ADMIN: 'Administrateur',
-    MANAGER: 'Gérant',
-    CASHIER: 'Caissier',
-    KITCHEN: 'Cuisine',
-    WAITER: 'Serveur',
-  };
+  const menuItems = menuItemsForRole(userRole);
+  const managementMenuItems = managementMenuItemsForRole(userRole);
+  const roleLabel = ROLE_LABELS;
 
   return (
     <div className="h-screen flex bg-gray-50">

@@ -19,7 +19,9 @@ import UsersManagementPage from './pages/UsersManagementPage';
 import ClosuresPage from './pages/ClosuresPage';
 import AppSettingsPage from './pages/AppSettingsPage';
 import Layout from './components/Layout';
+import MobileShell from './components/mobile/MobileShell';
 import ToastContainer from './components/ToastContainer';
+import { useIsMobile } from './hooks/useIsMobile';
 import type { AppSettings, ApiResponse } from './types';
 
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
@@ -38,6 +40,7 @@ return isAuthenticated ? <PlatformAdminDashboard /> : <PlatformAdminLoginPage />
 function TenantApp() {
 const { isAuthenticated, user, logout } = useAuthStore();
 const { setSettings, isLoaded, settings } = useAppSettingsStore();
+const isMobile = useIsMobile();
 
 // Vérifier expiration de session au démarrage
 useEffect(() => {
@@ -163,6 +166,10 @@ link.href = faviconHref;
 
 if (!isAuthenticated || !user) {
 return <LoginPage />;
+}
+
+if (isMobile) {
+return <MobileShell user={user} onLogout={logout} />;
 }
 
 return (

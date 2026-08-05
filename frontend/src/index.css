@@ -77,3 +77,10 @@ monospace;
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-up { animation: fade-in-up 0.2s ease-out; }
+
+/* Mobile bottom sheet animation */
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up-sheet { animation: slide-up-sheet 0.22s ease-out; }

@@ -26,7 +26,7 @@ datasource db {
 
 model Restaurant {
   id        String   @id @default(cuid())
-  code      String   @unique // Code établissement saisi à la connexion (ex: CHEZFATOU)
+  code      String   @unique // Code établissement saisi à la connexion (ex: DREY'SWEET)
   name      String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

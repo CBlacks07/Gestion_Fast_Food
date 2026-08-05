@@ -161,7 +161,7 @@ export default function LoginPage() {
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="Ex: CHEZFATOU"
+                  placeholder="Ex: DREY'SWEET"
                   disabled={isLoading}
                   autoComplete="organization"
                   autoFocus
