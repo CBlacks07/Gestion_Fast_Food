@@ -209,6 +209,7 @@ function UsersModal({ restaurant, onClose }: { restaurant: Restaurant; onClose: 
 const [users, setUsers] = useState<PlatformUser[]>([]);
 const [isLoading, setIsLoading] = useState(true);
 const [resetCredentials, setResetCredentials] = useState<{ username: string; password: string } | null>(null);
+const [resetTarget, setResetTarget] = useState<PlatformUser | null>(null);
 
 const load = async () => {
 setIsLoading(true);
@@ -225,9 +226,10 @@ load();
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [restaurant.id]);
 
-const handleReset = async (user: PlatformUser) => {
+const confirmReset = async () => {
+if (!resetTarget) return;
 try {
-const response = await platformUsersApi.resetPassword(user.id);
+const response = await platformUsersApi.resetPassword(resetTarget.id);
 if (response.success) {
 setResetCredentials({ username: response.data.username, password: response.data.newPassword });
 } else {
@@ -235,6 +237,8 @@ toast.error('Erreur lors de la réinitialisation');
 }
 } catch {
 toast.error('Erreur lors de la réinitialisation');
+} finally {
+setResetTarget(null);
 }
 };
 
@@ -247,6 +251,19 @@ lines={[
 { label: 'Nouveau mot de passe', value: resetCredentials.password },
 ]}
 onClose={() => setResetCredentials(null)}
+/>
+);
+}
+
+if (resetTarget) {
+return (
+<ConfirmDialog
+title="Réinitialiser le mot de passe ?"
+message={`Un nouveau mot de passe sera généré pour "${resetTarget.username}". L'ancien mot de passe cessera immédiatement de fonctionner.`}
+confirmLabel="Réinitialiser"
+variant="warning"
+onConfirm={confirmReset}
+onCancel={() => setResetTarget(null)}
 />
 );
 }
@@ -278,7 +295,7 @@ return (
 <div className="text-xs text-gray-400 truncate">{u.email} · {u.role}{!u.isActive && ' · désactivé'}</div>
 </div>
 <button
-onClick={() => handleReset(u)}
+onClick={() => setResetTarget(u)}
 className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border border-gray-200 hover:border-gray-300 rounded-lg px-2.5 py-1.5 flex-shrink-0 ml-2"
 title="Réinitialiser le mot de passe"
 >
@@ -301,6 +318,7 @@ const [isLoading, setIsLoading] = useState(true);
 const [showCreate, setShowCreate] = useState(false);
 const [usersModalFor, setUsersModalFor] = useState<Restaurant | null>(null);
 const [deleteTarget, setDeleteTarget] = useState<Restaurant | null>(null);
+const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
 const load = async () => {
 setIsLoading(true);
@@ -352,7 +370,7 @@ return (
 </div>
 </div>
 <button
-onClick={logout}
+onClick={() => setShowLogoutConfirm(true)}
 className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white"
 >
 <LogOut size={16} />
@@ -457,6 +475,17 @@ confirmLabel="Supprimer"
 variant="danger"
 onConfirm={confirmDelete}
 onCancel={() => setDeleteTarget(null)}
+/>
+)}
+{showLogoutConfirm && (
+<ConfirmDialog
+title="Se déconnecter"
+message="Êtes-vous sûr de vouloir vous déconnecter du panneau superadmin ?"
+confirmLabel="Se déconnecter"
+cancelLabel="Annuler"
+variant="warning"
+onConfirm={logout}
+onCancel={() => setShowLogoutConfirm(false)}
 />
 )}
 </div>
