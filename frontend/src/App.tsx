@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useAppSettingsStore } from './store/appSettingsStore';
 import { usePlatformAdminStore } from './store/platformAdminStore';
-import api from './services/api';
+import api, { API_BASE_URL } from './services/api';
 import LoginPage from './pages/LoginPage';
 import PlatformAdminLoginPage from './pages/PlatformAdminLoginPage';
 import PlatformAdminDashboard from './pages/PlatformAdminDashboard';
@@ -139,6 +139,27 @@ document.documentElement.style.setProperty('--color-secondary-600',
 }
 }
 }, [settings?.primaryColor, settings?.secondaryColor]);
+
+// Titre de l'onglet + favicon : reflètent le restaurant connecté au lieu
+// du nom générique statique. Se réinitialisent au logout (settings repasse
+// aux valeurs par défaut via appSettingsStore.reset()).
+useEffect(() => {
+document.title = settings?.appName || 'Gestion Fast-Food';
+
+const faviconHref = settings?.logoUrl
+? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${API_BASE_URL}${settings.logoUrl}`)
+: `data:image/svg+xml,${encodeURIComponent(
+`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${settings?.appIcon || '🍽️'}</text></svg>`
+)}`;
+
+let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+if (!link) {
+link = document.createElement('link');
+link.rel = 'icon';
+document.head.appendChild(link);
+}
+link.href = faviconHref;
+}, [settings?.appName, settings?.appIcon, settings?.logoUrl]);
 
 if (!isAuthenticated || !user) {
 return <LoginPage />;
