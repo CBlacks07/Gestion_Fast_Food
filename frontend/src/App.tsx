@@ -1,9 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useAppSettingsStore } from './store/appSettingsStore';
+import { usePlatformAdminStore } from './store/platformAdminStore';
 import api from './services/api';
 import LoginPage from './pages/LoginPage';
+import PlatformAdminLoginPage from './pages/PlatformAdminLoginPage';
+import PlatformAdminDashboard from './pages/PlatformAdminDashboard';
 import POSPage from './pages/POSPage';
 import OrdersPage from './pages/OrdersPage';
 import DashboardPage from './pages/DashboardPage';
@@ -21,7 +25,17 @@ import type { AppSettings, ApiResponse } from './types';
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const LAST_ACTIVE_KEY = 'lastActiveAt';
 
-function App() {
+// Zone superadmin (/admin/*) : totalement indépendante de l'auth tenant,
+// son propre store/token (voir platformAdminStore.ts). Ne partage ni écran
+// de connexion ni session avec le reste de l'application.
+function PlatformAdminZone() {
+const isAuthenticated = usePlatformAdminStore((state) => state.isAuthenticated);
+return isAuthenticated ? <PlatformAdminDashboard /> : <PlatformAdminLoginPage />;
+}
+
+// Application « tenant » : tout ce qui existait déjà dans App avant l'ajout
+// de la zone superadmin, inchangé.
+function TenantApp() {
 const { isAuthenticated, user, logout } = useAuthStore();
 const { setSettings, isLoaded, settings } = useAppSettingsStore();
 
@@ -131,7 +145,6 @@ return <LoginPage />;
 }
 
 return (
-<BrowserRouter>
 <Layout onLogout={logout} username={user.username} userRole={user.role}>
 <Routes>
 <Route
@@ -155,6 +168,16 @@ replace
 <Route path="/app-settings" element={<AppSettingsPage />} />
 </Routes>
 </Layout>
+);
+}
+
+function App() {
+return (
+<BrowserRouter>
+<Routes>
+<Route path="/admin/*" element={<PlatformAdminZone />} />
+<Route path="/*" element={<TenantApp />} />
+</Routes>
 </BrowserRouter>
 );
 }

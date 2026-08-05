@@ -20,6 +20,7 @@ import closuresRoutes from './routes/closures';
 import appSettingsRoutes from './routes/app-settings';
 import uploadRoutes from './routes/upload';
 import restaurantsRoutes from './routes/restaurants';
+import platformRoutes from './routes/platform';
 import { dbHealthCheckMiddleware, checkDbConnection } from './middleware/dbHealthCheck';
 
 dotenv.config();
@@ -146,6 +147,8 @@ export function buildApp(): FastifyInstance {
     { method: 'POST', path: '/api/auth/login' },
     { method: 'GET', path: '/api/health' }, // sonde de disponibilité
     { method: 'GET', path: '/api/restaurants/branding' }, // logo/nom affichés sur l'écran de login
+    // /api/platform/* n'a pas besoin d'être listé ici : le préfixe entier est
+    // exempté de la vérification JWT tenant juste au-dessus (auth séparée).
   ];
 
   app.addHook('onRequest', async (request, reply) => {
@@ -154,14 +157,31 @@ export function buildApp(): FastifyInstance {
 
     // Le chemin peut contenir une query string -> ne comparer que la partie path
     const path = request.url.split('?')[0];
+
+    // Les routes /api/platform/* ont leur propre système d'auth, complètement
+    // séparé (voir middleware/platformAuth.ts) : le superadmin n'a ni userId
+    // ni restaurantId, la vérification JWT "tenant" ci-dessous ne s'applique
+    // donc pas à ce préfixe.
+    if (path.startsWith('/api/platform/')) return;
+
     const isPublic = PUBLIC_ENDPOINTS.some(
       (e) => e.method === request.method && path === e.path
     );
     if (isPublic) return;
 
     try {
-      const payload = await request.jwtVerify();
-      request.user = payload as any;
+      const payload = (await request.jwtVerify()) as any;
+      // Vérifier la FORME du payload, pas juste la signature : un token
+      // superadmin (/api/platform) est signé avec le même secret mais n'a
+      // pas de restaurantId. request.jwtVerify() seul ne le distinguerait
+      // pas d'un token tenant valide, et un `restaurantId: undefined` dans
+      // un `where` Prisma est silencieusement ignoré (pas de filtre) plutôt
+      // que de ne rien retourner — sans ce contrôle, un token superadmin
+      // verrait les données de N'IMPORTE QUEL restaurant.
+      if (typeof payload.userId !== 'string' || typeof payload.restaurantId !== 'string') {
+        throw new Error('Payload JWT invalide pour une route tenant');
+      }
+      request.user = payload;
     } catch {
       return reply.status(401).send({
         success: false,
@@ -182,6 +202,7 @@ export function buildApp(): FastifyInstance {
   app.register(appSettingsRoutes, { prefix: '/api/app-settings' });
   app.register(uploadRoutes, { prefix: '/api/upload' });
   app.register(restaurantsRoutes, { prefix: '/api/restaurants' });
+  app.register(platformRoutes, { prefix: '/api/platform' });
 
   return app;
 }

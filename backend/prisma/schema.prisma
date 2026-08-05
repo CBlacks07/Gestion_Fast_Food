@@ -49,6 +49,26 @@ model Restaurant {
 }
 
 // ============================================
+// SUPERADMIN DE LA PLATEFORME
+// ============================================
+// N'appartient à AUCUN restaurant, volontairement séparé du modèle User pour
+// qu'il ne puisse jamais être confondu avec un compte tenant (voir
+// middleware/platformAuth.ts) : cette séparation est ce qui garantit que
+// l'isolation entre restaurants ne peut pas être contournée par erreur.
+
+model PlatformAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_admins")
+}
+
+// ============================================
 // GESTION DES UTILISATEURS ET RÔLES
 // ============================================
 

@@ -146,6 +146,25 @@ transmettre au client, avec la consigne de changer le mot de passe après la
 première connexion. Peut être exécuté contre Neon (avec `DATABASE_URL`/
 `DIRECT_URL` temporairement sur les valeurs de prod) ou en local pour tester.
 
+## 8. Panneau superadmin (gestion de tous les restaurants)
+
+Une zone séparée (`/admin`), avec sa propre authentification (aucun rapport
+avec les comptes restaurant), permet de voir tous les restaurants clients,
+en créer/supprimer, suspendre/réactiver un client, et réinitialiser le mot
+de passe de n'importe quel utilisateur. Ce compte n'appartient à aucun
+restaurant — il est complètement séparé du modèle `User`.
+
+**Bootstrap du premier compte superadmin** (une seule fois) :
+
+```bash
+cd backend
+npm run create-platform-admin:prod -- --username=TONIDENTIFIANT --email=toi@exemple.com
+```
+
+(ou `npm run create-platform-admin` en local pour tester d'abord). Le mot
+de passe est généré automatiquement et affiché à l'écran — connexion ensuite
+sur `https://<projet>.vercel.app/admin`.
+
 ## Développement local : rien ne change
 
 `backend/.env` garde `DATABASE_URL`/`DIRECT_URL` pointant sur Postgres local,
