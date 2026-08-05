@@ -17,16 +17,20 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  // "danger" reste rouge fixe quel que soit le thème du restaurant (convention
+  // universelle pour une action destructive : ne doit jamais se fondre dans
+  // une couleur de marque "amicale"). "warning"/"info" suivent la couleur
+  // principale du restaurant, comme le reste de l'interface.
   const confirmStyles = {
     danger: 'bg-red-600 hover:bg-red-700 text-white',
-    warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
-    info: 'bg-blue-600 hover:bg-blue-700 text-white',
+    warning: 'bg-primary-500 hover:bg-primary-600 text-white',
+    info: 'bg-primary-500 hover:bg-primary-600 text-white',
   };
 
   const iconColors = {
     danger: 'text-red-600 bg-red-100',
-    warning: 'text-yellow-600 bg-yellow-100',
-    info: 'text-blue-600 bg-blue-100',
+    warning: 'text-primary-600 bg-primary-100',
+    info: 'text-primary-600 bg-primary-100',
   };
 
   return (

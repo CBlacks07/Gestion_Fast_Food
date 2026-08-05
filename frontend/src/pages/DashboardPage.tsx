@@ -230,11 +230,12 @@ export default function DashboardPage() {
 
           {/* Panier moyen */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="h-1 bg-emerald-400" />
+            <div className="h-1" style={{ background: 'var(--color-secondary, #6b7280)' }} />
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-                  <Calculator size={20} className="text-emerald-500" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'rgba(var(--color-secondary-rgb, 107, 114, 128), 0.1)' }}>
+                  <Calculator size={20} style={{ color: 'var(--color-secondary, #6b7280)' }} />
                 </div>
                 <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
                   Moyenne
